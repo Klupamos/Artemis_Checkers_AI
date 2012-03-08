@@ -32,6 +32,12 @@ using std::size_t;
 #include "FFNN.h"
 
 
+#if !defined(__APPLE_)
+inline double drand48(){
+	return rand()/(double)RAND_MAX;
+}
+#endif
+
 /*	sigmoid()
 	Pre: None
 	Post: return == normalized value of x within (-1,1)

@@ -19,7 +19,7 @@ layer[0]=4;\
 layer[1]=3;\
 layer[2]=2;\
 layer[3]=1;
-#define def_input_layer		(32)
+#define def_input_layer		(4)
 #define def_total_values	((3+1) + (2+2))
 #define def_value_space		def_total_values*sizeof(float)
 #define	def_total_weights	((4+0)*3 + (3+1)*2 + (2+2)*1)
