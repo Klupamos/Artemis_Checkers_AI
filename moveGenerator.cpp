@@ -14,7 +14,7 @@ using std::cout; using std::endl;
 
 
 void board::printBoard(){
-	cout << "Board" << endl;
+	//cout << "Board" << endl;
 	
 	ULONG WK = kings & whitePawns;
 	ULONG WP = whitePawns;
@@ -53,8 +53,8 @@ bool operator!=(const board & lhs, const board & rhs){
 
 
 
-moveGenerator::moveGenerator():current_peice(1), direction_tested(NONE), player(WHITE){}
-moveGenerator::moveGenerator(player_t p, board newBoard):current_peice(1), direction_tested(NONE), player(p), main_Board(newBoard), current_Board(newBoard){
+moveGenerator::moveGenerator():current_peice(1), direction_to_test(F4), player(WHITE){}
+moveGenerator::moveGenerator(player_t p, board newBoard):current_peice(1), direction_to_test(F4), player(p), main_Board(newBoard), current_Board(newBoard){
 	sliding_peices = sliders(player);
 	jumping_peices = jumpers(player);
 	
@@ -263,81 +263,236 @@ ULONG moveGenerator::jumpers( player_t player){	// true == white to move
 
 void moveGenerator::nextBoard(){
 	
-
-	if (!current_peice){
-		current_Board = board();
-		return;
-	}
-	
-	
-	int dir = (player==WHITE ? +1 : -1 );	// white=1,	black=0
-											// king=1,	!king=0
-											// logical XOR
-	
-	current_Board = main_Board;
-	
-	
+	/*
+	 test jump >> 4 (White | BlackKing)
+	 
+		mid_space = (current_peice >> 4) & your_peices;
+		end_space = (mid_space >> (3|5)) & ~(my_peices | your_peices);
+	 
+	 if (player == WHITE){
+		current_Board.blackPawns &= mid_space;
+		current_Board.kings &= mid_space;
+	 
+		current_Board.whitePawns &= ~current_peice;
+		current_Board.whitePawns |= end_space;
+		
+	 }else{
+		current_Board.whitePawns &= mid_space;
+		current_Board.kings &= mid_space;
+	 
+		current_Board.blackPawns &= ~current_peice;
+		current_Board.blackPawns |= end_space;
+	 }
+	 
+	 if (current_peice & current_Board.kings){
+		current_Board.kings &= ~current_peice;
+		current_Board.kings |= end_space;
+	 }
+	 
+	 */
 	
 	
 	/*
-	 
 	test << 4*(White | BlackKing)
-		valid_slide = ((current_peice & (current_Board.whitePawns | (current_Board.blackPawns & current_Board.kings))) << 4) & ~(my_peices | your_peices)
+		end_space = ((current_peice & (current_Board.whitePawns | (current_Board.blackPawns & current_Board.kings))) << 4) & ~(my_peices | your_peices)
  
  
 	test << (3|5)*(White | BlackKing)	 
-		valid_slide = ((current_peice & MASK_D3 & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 3) & ~(my_peices | your_peices) & ()
-		valid_slide = ((current_peice & MASK_D5 & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 5) & ~(my_peices | your_peices) & ()
+		end_space = ((current_peice & MASK_D3 & (current_Board.whitePawns | (current_Board.blackPawns & current_Board.kings))) << 3) & ~(my_peices | your_peices)
+		end_space = ((current_peice & MASK_D5 & (current_Board.whitePawns | (current_Board.blackPawns & current_Board.kings))) << 5) & ~(my_peices | your_peices)
 
 		
 	test >> 4*(Black | WhiteKing)
-		valid_slide = ((current_peice & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 4) & ~(my_peices | your_peices)
+		end_space = ((current_peice & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 4) & ~(my_peices | your_peices)
 
  
 	test >> (3|5)*(Black | WhiteKing)
-	 
+		end_space = ((current_peice & MASK_U3 & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 3) & ~(my_peices | your_peices) & ()
+		end_space = ((current_peice & MASK_U5 & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 5) & ~(my_peices | your_peices) & ()
+
 	*/
+
 	
+	current_Board = main_Board;
 	
-	
+	ULONG mid_space = 0;
+	ULONG end_space = 0;
 	
 	if (jumping_peices){
-		// nop();
-	}else{ // sliding_peices
-		ULONG testsquare;
-//		ULONG testsquare = (current_peice << (dir*4)) & ~(my_peices | your_peices);
 		
-		if ( testsquare = ((player==WHITE)*(current_peice << 4) | (player==BLACK)*(current_peice >> 4)) & ~(my_peices | your_peices) ){ // +4
-
-			if (player == WHITE){
-				current_Board.whitePawns &= ~current_peice;
-				current_Board.whitePawns |= testsquare;
-			}else{
-				current_Board.blackPawns &= ~current_peice;
-				current_Board.blackPawns |= testsquare;				
-			}
-			
-			if (current_peice & current_Board.kings){
-				current_Board.kings &= ~current_peice;
-				current_Board.kings |= testsquare;
-			}
-			
-			
-		}else{
-			
-			cout << "Error: peice (" << current_peice << ") with no move" << endl;
+		switch (direction_to_test) {
+			case INC:
+				cout << "Increment and Continue" << endl;
+				do{
+					current_peice = (current_peice << 1);
+				}while (current_peice && !(current_peice & my_peices));
+				
+				if (!current_peice){
+					current_Board = board();
+					return;
+				}
+				
+				next_jumper_F4:
+			case F4:
+				cout << "Testing F4" << endl;
+				if (false){
+					direction_to_test = F35;
+					break;
+				}
+			case F35:
+				cout << "Testing F35" << endl;
+				if (false){
+					direction_to_test = B4;
+					break;
+				}
+				
+			case B4:
+				cout << "Testing B4" << endl;
+				if (false){
+					direction_to_test = B35;
+					break;
+				}
+				
+			case B35:
+				cout << "Testing B35" << endl;
+				if (false){
+					direction_to_test = INC;
+					break;
+				}
+				
+				
+				cout << "Reset and Increment" << endl;
+				do{
+					current_peice = (current_peice << 1);
+				}while (current_peice && !(current_peice & my_peices));
+				direction_to_test = F4;
+				
+				if (!current_peice){
+					current_Board = board();
+					return;
+				}
+				
+				goto next_jumper_F4;
+				
+				break;
+				
+				
+			default:
+				cout << "Error: peice (" << current_peice << ") with no move" << endl;
+				current_Board = board();
+				return;
 		}
-
+		
+		
+		
+		
+	}else{ // sliding_peices
+		switch (direction_to_test) {
+			case INC:
+				cout << "Increment and Continue" << endl;
+				do{
+					current_peice = (current_peice << 1);
+				}while (current_peice && !(current_peice & my_peices));
+				
+				if (!current_peice){
+					current_Board = board();
+					return;
+				}
+			next_slider_F4:
+			case F4:
+				cout << "Testing F4" << endl;
+				//if ( end_space = ((player==WHITE)*(current_peice << 4) | (player==BLACK)*(current_peice >> 4)) & ~(my_peices | your_peices) ){ // +4
+				if ( end_space = ((current_peice & (current_Board.whitePawns | (current_Board.blackPawns & current_Board.kings))) << 4) & ~(my_peices | your_peices) ){
+					direction_to_test = F35;
+					break;
+				}
+			case F35:
+				cout << "Testing F35" << endl;
+								
+				if ( 
+					(current_peice & MASK_F5)
+					&& 
+					(end_space = ((current_peice & MASK_F5 & (current_Board.whitePawns | (current_Board.blackPawns & current_Board.kings))) << 5) & ~(my_peices | your_peices))
+					
+					||
+					
+					(current_peice & MASK_F3)
+					&& 
+					(end_space = ((current_peice & MASK_F3 & (current_Board.whitePawns | (current_Board.blackPawns & current_Board.kings))) << 3) & ~(my_peices | your_peices))
+					){
+					
+					
+					direction_to_test = B35;
+					break;
+				}
+			
+			case B35:
+				cout << "Testing B35" << endl;
+				if ( 
+					(current_peice & MASK_B5)
+					&& 
+					(end_space = ((current_peice & MASK_B5 & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 5) & ~(my_peices | your_peices))
+					
+					||
+					
+					(current_peice & MASK_B3)
+					&& 
+					(end_space = ((current_peice & MASK_B3 & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 3) & ~(my_peices | your_peices))
+					){
+					direction_to_test = B4;
+					break;
+				}
+				
+			case B4:
+				cout << "Testing B4" << endl;
+				if ( end_space = ((current_peice & (current_Board.blackPawns | (current_Board.whitePawns & current_Board.kings))) >> 4) & ~(my_peices | your_peices) ){
+					direction_to_test = INC;
+					break;
+				}
+				
+				
+				cout << "Reset and Increment" << endl;
+				do{
+					current_peice = (current_peice << 1);
+				}while (current_peice && !(current_peice & my_peices));
+				direction_to_test = F4;
+				
+				if (!current_peice){
+					current_Board = board();
+					return;
+				}
+				
+				goto next_slider_F4;
+				
+				break;
+				
+				
+			default:
+				cout << "Error: peice (" << current_peice << ") with no move" << endl;
+				current_Board = board();
+				return;
+		}
+		
 	}
 	
+	// removed any jumped peice
+	(player == WHITE ? current_Board.blackPawns : current_Board.whitePawns) &= ~mid_space;
+	current_Board.kings &= ~mid_space;
 	
-	do{
-		current_peice = (current_peice << 1);
-	}while (current_peice && !(current_peice & my_peices));
+	// move peice
+	(player == WHITE ? current_Board.whitePawns : current_Board.blackPawns) &= ~current_peice;
+	(player == WHITE ? current_Board.whitePawns : current_Board.blackPawns) |= end_space;
 	
 	
-	
-	
+	// move king 
+	if (current_Board.kings & current_peice){
+		current_Board.kings &= ~current_peice;
+		current_Board.kings |= end_space;
+	}
+
+	// moved peice becomes king?
+	current_Board.kings |= (current_Board.whitePawns & 0xF0000000);
+	current_Board.kings |= (current_Board.blackPawns & 0x0000000F);
 	
  }
 

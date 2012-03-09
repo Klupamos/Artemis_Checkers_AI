@@ -45,12 +45,17 @@ public:
 		MASK_D5 = 0xE0E0E0E0,
 		MASK_D3 = 0x07070707,
 		MASK_U3 = MASK_D5,
-		MASK_U5 = MASK_D3
+		MASK_U5 = MASK_D3,
+		
+		MASK_F5 = MASK_D3,
+		MASK_F3 = MASK_D5,
+		MASK_B5 = MASK_D5,
+		MASK_B3 = MASK_D3
 	};
 	
 	enum player_t {WHITE, BLACK};
 	
-	enum Direction{NONE,P4,PO,M4,MO};
+	enum Direction{F4, F35, B4, B35, INC};
 	
 private:
 	player_t player;
@@ -61,7 +66,7 @@ private:
 	ULONG current_peice;	// the currently selected peice
 	ULONG my_peices;		// all peices that can move (sliding_peices XOR jumping_peices)
 	ULONG your_peices;
-	Direction direction_tested;
+	Direction direction_to_test;
 	
 public:
 	moveGenerator();
