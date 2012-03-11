@@ -25,15 +25,19 @@ int main(int argc, char * const argv[]){
 
 
 	board NULLBOARD;
-	board testBoard(0x00000F00, 0x00F00000, 0x00F00F00);
 	
+	
+	
+//	board testBoard(0x00000FFF, 0xFFF00000, 0x00000000);
+	board testBoard(0x00000008, 0x00E0E0E0, 0x00000008);
+
 	moveGenerator mg(moveGenerator::WHITE, testBoard);
 	
 	cout << "mainBoard" << endl;
 	testBoard.printBoard();
 	
-	
-	while (mg.curBoard() != NULLBOARD){
+
+	while (mg.curBoard() != NULLBOARD){		
 		mg.curBoard().printBoard();
 		mg.nextBoard();
 	}

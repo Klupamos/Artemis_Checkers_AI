@@ -19,14 +19,16 @@ public:
 	ULONG kings;
 	
 	/*
-	   00  01  02  03	White starts on top
-	 04  05  06  07		  and moves down
-	   08  09  10  11		
-	 12  13  14  15			
-	   16  17  18  19		
-	 20  21  22  23		Black starts on bottom
-	   24  25  26  27	  and moves up
-	 28  29  30  31	  */
+	  31  30  29  28	Black starts on top
+	27  26  25  24		  and moves down
+	  23  22  21  20
+	19  18  17  16
+	  15  14  13  12
+	11  10  09  08
+	  07  06  05  04	White starts on bottom
+	03  02  01  00		  and moves up
+	*/
+	
 	
 	board():whitePawns(0), blackPawns(0), kings(0){};
 	board(ULONG w, ULONG b, ULONG k):whitePawns(w), blackPawns(b), kings(k){};
@@ -42,6 +44,7 @@ public:
 class moveGenerator{
 public:
 	enum {
+		/*
 		MASK_D5 = 0xE0E0E0E0,
 		MASK_D3 = 0x07070707,
 		MASK_U3 = MASK_D5,
@@ -51,6 +54,13 @@ public:
 		MASK_F3 = MASK_D5,
 		MASK_B5 = MASK_D5,
 		MASK_B3 = MASK_D3
+		 */
+		
+		// VV these correct VV
+		MASK_F3 = 0x00E0E0E0,
+		MASK_F5 = 0x07070707,
+		MASK_B3 = 0x07070700,
+		MASK_B5 = 0xE0E0E0E0
 	};
 	
 	enum player_t {WHITE, BLACK};
@@ -60,16 +70,21 @@ public:
 private:
 	player_t player;
 	board main_Board;
-	board current_Board;
-	ULONG sliding_peices;	// only peices that can slide
-	ULONG jumping_peices;	// only peices that can jump
-	ULONG current_peice;	// the currently selected peice
-	ULONG my_peices;		// all peices that can move (sliding_peices XOR jumping_peices)
-	ULONG your_peices;
-	Direction direction_to_test;
+	char stack_pos;
+	board current_Board[9];
+	ULONG current_Piece[9];	// the currently selected piece
+	Direction next_Test[9];
+	
+	ULONG sliding_pieces;	// only pieces that can slide
+	ULONG jumping_pieces;	// only pieces that can jump
+	
+	ULONG my_movable_pieces; // all pieces that can move (sliding_pieces XOR jumping_pieces)
+	ULONG* my_pieces;	
+	ULONG* your_pieces;
+	
+	
 	
 public:
-	moveGenerator();
 	moveGenerator(player_t, board);
 	
 	board curBoard();
