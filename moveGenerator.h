@@ -70,17 +70,19 @@ public:
 private:
 	player_t player;
 	board main_Board;
+	
 	char stack_pos;
-	board current_Board[9];
-	ULONG current_Piece[9];	// the currently selected piece
-	Direction next_Test[9];
+	board current_Board[10];
+	ULONG current_Piece[10];	// the currently selected piece
+	Direction next_Test[10];
+	bool end_of_chain[10];
 	
 	ULONG sliding_pieces;	// only pieces that can slide
 	ULONG jumping_pieces;	// only pieces that can jump
 	
 	ULONG my_movable_pieces; // all pieces that can move (sliding_pieces XOR jumping_pieces)
-	ULONG* my_pieces;	
-	ULONG* your_pieces;
+	ULONG* my_pieces;		 //	if (player == WHITE) points to current_Board.whitepawns
+	ULONG* your_pieces;		 //	if (player == WHITE) points to current_Board.blackpawns
 	
 	
 	

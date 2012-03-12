@@ -315,31 +315,39 @@ void moveGenerator::nextBoard(){
 
 	*/
 	
+	current_Board[0] = main_Board;
+	
 	ULONG mid_space = 0;
 	ULONG end_space = 0;
 	
 	if (jumping_pieces){
-		bool undo_move = false;
 		
-		while (true){
+		
+		if (stack_pos > 0){
+			cout << "Poping Back (1): " << (int)stack_pos << " : " << next_Test[stack_pos] << endl;
+
 			
-			if (undo_move){
-				undo_move = false;
-				
-				switch (next_Test[--stack_pos]){
-					case F35:
-						goto Test_F35;
-					case B4:
-						goto Test_B4;
-					case B35:
-						goto Test_B35;
-					case INC:
-						goto Test_INC;
-				}
+			stack_pos--;
+			my_pieces   = (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].whitePawns))) | (player == BLACK) * long(&(current_Board[stack_pos].blackPawns)));
+			your_pieces = (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].blackPawns))) | (player == BLACK) * long(&(current_Board[stack_pos].whitePawns)));
+			
+			
+			switch (next_Test[stack_pos]){
+				case F35:
+					goto Test_F35;
+				case B4:
+					goto Test_B4;
+				case B35:
+					goto Test_B35;
+				case INC:
+					goto Ret;
 			}
+		}
+				
+		while (true){
+			end_of_chain[stack_pos] = true;
 			
-			
-			cout << "Testing F4" << endl;
+			cout << "Testing F4";
 			if (
 				(mid_space = ((current_Piece[stack_pos] & (current_Board[stack_pos].whitePawns | (current_Board[stack_pos].blackPawns & current_Board[stack_pos].kings))) << 4) & *your_pieces)
 				&&
@@ -351,77 +359,217 @@ void moveGenerator::nextBoard(){
 				 (end_space = (mid_space << 5) & ~(*my_pieces | *your_pieces))
 				)
 				){
+				cout << ": 1" << endl;
+				end_of_chain[stack_pos] = false;
 				
-				current_Board[stack_pos] = current_Board[stack_pos++];
-				my_pieces;
-				your_pieces;
+				
+				next_Test[stack_pos] = F35;								// store where to call next once im back
+				current_Board[stack_pos+1] = current_Board[stack_pos];	// store what im coming back to 
+				stack_pos++;
+				
+				current_Piece[stack_pos] = end_space;
+				
+				// set up what i will be working on
+				my_pieces =   (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].whitePawns))) | (player == BLACK) * long(&(current_Board[stack_pos].blackPawns)));
+				your_pieces = (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].blackPawns))) | (player == BLACK) * long(&(current_Board[stack_pos].whitePawns)));
+
 				
 				// place end_piece
 				*my_pieces |= end_space;
-				current_Board[0].kings |= bool(current_Board[0].kings & current_Piece[0]) * end_space;
+				current_Board[stack_pos].kings |= bool(current_Board[stack_pos].kings & current_Piece[stack_pos-1]) * end_space;
 				
 				// remove start_piece
-				*my_pieces &= ~current_Piece[0];
-				current_Board[0].kings &= ~current_Piece[0];
+				*my_pieces &= ~current_Piece[stack_pos-1];
+				current_Board[stack_pos].kings &= ~current_Piece[stack_pos-1];
 				
 				// remove jumped_piece
 				*your_pieces &= ~mid_space;
-				current_Board[0].kings &= ~mid_space;
-				
-				// store where to call next
-				next_Test[stack_pos++] = F35;
+				current_Board[stack_pos].kings &= ~mid_space;
 				
 				continue;
 			}
+			cout << ": 0" << endl;
 			
 		Test_F35:
-			cout << "Testing F35" << endl;
-		/*	if (
+			cout << "Testing F35";
+			if (
 				(
-				 (current_Piece[0] & MASK_F3 & (current_Board[0].whitePawns | (current_Board[0].blackPawns & current_Board[0].kings)) ) &&
-				 (mid_space = (current_Piece[0] << 3) & your_pieces)
+				 (current_Piece[stack_pos] & MASK_F3 & (current_Board[stack_pos].whitePawns | (current_Board[stack_pos].blackPawns & current_Board[stack_pos].kings)) ) &&
+				 (mid_space = (current_Piece[stack_pos] << 3) & *your_pieces)
 				 ||
-				 (current_Piece[0] & MASK_F5 & (current_Board[0].whitePawns | (current_Board[0].blackPawns & current_Board[0].kings)) ) && 
-				 (mid_space = (current_Piece[0] << 5) & your_pieces)
+				 (current_Piece[stack_pos] & MASK_F5 & (current_Board[stack_pos].whitePawns | (current_Board[stack_pos].blackPawns & current_Board[stack_pos].kings)) ) && 
+				 (mid_space = (current_Piece[stack_pos] << 5) & *your_pieces)
 				)
 				&&
-				(end_space = (mid_space << 4) & ~(my_pieces | your_pieces))
+				(end_space = (mid_space << 4) & ~(*my_pieces | *your_pieces))
 				
 				){
-				removal_mask |= mid_space;
+				cout << ": 1" << endl;
+				end_of_chain[stack_pos] = false;
+				
+				next_Test[stack_pos] = B4;								// store where to call next once im back
+				current_Board[stack_pos+1] = current_Board[stack_pos];	// store what im coming back to 
+				stack_pos++;
+				
+				current_Piece[stack_pos] = end_space;
+				
+				// set up what i will be working on
+				my_pieces =   (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].whitePawns))) | (player == BLACK) * long(&(current_Board[stack_pos].blackPawns)));
+				your_pieces = (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].blackPawns))) | (player == BLACK) * long(&(current_Board[stack_pos].whitePawns)));
+				
+				
+				// place end_piece
+				*my_pieces |= end_space;
+				current_Board[stack_pos].kings |= bool(current_Board[stack_pos].kings & current_Piece[stack_pos-1]) * end_space;
+				
+				// remove start_piece
+				*my_pieces &= ~current_Piece[stack_pos-1];
+				current_Board[stack_pos].kings &= ~current_Piece[stack_pos-1];
+				
+				// remove jumped_piece
+				*your_pieces &= ~mid_space;
+				current_Board[stack_pos].kings &= ~mid_space;
+				
 				continue;
 			}
-		*/	
+			cout << ": 0" << endl;
+			
 			Test_B4:
-			cout << "Testing B4" << endl;
-			if (false){
+			cout << "Testing B4";
+			if (
+				(mid_space = ((current_Piece[stack_pos] & (current_Board[stack_pos].blackPawns | (current_Board[stack_pos].whitePawns & current_Board[stack_pos].kings))) >> 4) & *your_pieces)
+				&&
+				(
+				 (mid_space & MASK_B3) &&
+				 (end_space = (mid_space >> 3) & ~(*my_pieces | *your_pieces))
+				 ||
+				 (mid_space & MASK_B5) && 
+				 (end_space = (mid_space >> 5) & ~(*my_pieces | *your_pieces))
+				 )
+				
+				){
+				cout << ": 1" << endl;
+				end_of_chain[stack_pos] = false;
+				
+				
+				next_Test[stack_pos] = B35;								// store where to call next once im back
+				current_Board[stack_pos+1] = current_Board[stack_pos];	// store what im coming back to 
+				stack_pos++;
+				
+				current_Piece[stack_pos] = end_space;
+				
+				// set up what i will be working on
+				my_pieces =   (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].whitePawns))) | (player == BLACK) * long(&(current_Board[stack_pos].blackPawns)));
+				your_pieces = (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].blackPawns))) | (player == BLACK) * long(&(current_Board[stack_pos].whitePawns)));
+				
+				
+				// place end_piece
+				*my_pieces |= end_space;
+				current_Board[stack_pos].kings |= bool(current_Board[stack_pos].kings & current_Piece[stack_pos-1]) * end_space;
+				
+				// remove start_piece
+				*my_pieces &= ~current_Piece[stack_pos-1];
+				current_Board[stack_pos].kings &= ~current_Piece[stack_pos-1];
+				
+				// remove jumped_piece
+				*your_pieces &= ~mid_space;
+				current_Board[stack_pos].kings &= ~mid_space;
+				
 				continue;
 			}
+			cout << ": 0" << endl;
 			
 			Test_B35:
-			cout << "Testing B35" << endl;
-			if (false){
+			cout << "Testing B35";
+			if (
+				(
+				 (current_Piece[stack_pos] & MASK_B3 & (current_Board[stack_pos].blackPawns | (current_Board[stack_pos].whitePawns & current_Board[stack_pos].kings)) ) &&
+				 (mid_space = (current_Piece[stack_pos] >> 3) & *your_pieces)
+				 ||
+				 (current_Piece[stack_pos] & MASK_B5 & (current_Board[stack_pos].blackPawns | (current_Board[stack_pos].whitePawns & current_Board[stack_pos].kings)) ) && 
+				 (mid_space = (current_Piece[stack_pos] >> 5) & *your_pieces)
+				 )
+				&&
+				(end_space = (mid_space >> 4) & ~(*my_pieces | *your_pieces))
+				
+				){
+				cout << ": 1" << endl;
+				end_of_chain[stack_pos] = false;
+				
+				next_Test[stack_pos] = INC;								// store where to call next once im back
+				current_Board[stack_pos+1] = current_Board[stack_pos];	// store what im coming back to 
+				stack_pos++;
+				
+				current_Piece[stack_pos] = end_space;
+				
+				// set up what i will be working on
+				my_pieces =   (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].whitePawns))) | (player == BLACK) * long(&(current_Board[stack_pos].blackPawns)));
+				your_pieces = (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].blackPawns))) | (player == BLACK) * long(&(current_Board[stack_pos].whitePawns)));
+				
+				
+				// place end_piece
+				*my_pieces |= end_space;
+				current_Board[stack_pos].kings |= bool(current_Board[stack_pos].kings & current_Piece[stack_pos-1]) * end_space;
+				
+				// remove start_piece
+				*my_pieces &= ~current_Piece[stack_pos-1];
+				current_Board[stack_pos].kings &= ~current_Piece[stack_pos-1];
+				
+				// remove jumped_piece
+				*your_pieces &= ~mid_space;
+				current_Board[stack_pos].kings &= ~mid_space;
+				
 				continue;
 			}
-					
-			Test_INC:
-			cout << "Reset and Increment" << endl;
-			do{
-				current_Piece[0] = (current_Piece[0] << 1);
-			}while (current_Piece[0] && !(current_Piece[0] & my_movable_pieces));
+			cout << ": 0" << endl;
+			
+			Ret:
+			if(stack_pos <= 0){
+				stack_pos = 1; //Pop Back(2) will decrease to 0;
+				end_of_chain[1] = false;
+				next_Test[0] = F4;
+				cout << "Inc Piece" << endl;
+				do{
+					current_Piece[0] = (current_Piece[0] << 1);
+				}while (current_Piece[0] & ~my_movable_pieces);
+				
+				if (!current_Piece[0]){
+					current_Board[0] = board();
+					return;
+				}
+			}
 			
 			
-			if (!current_Piece[0]){
-				current_Board[0] = board();
+			if (end_of_chain[stack_pos]){
+				cout << "End of Chain" << endl;
+				current_Board[0] = current_Board[stack_pos];
 				return;
 			}
-					
-					
+			
+			
+			//pop back again
+			cout << "Poping Back (2): " << (int)stack_pos << " : " << next_Test[stack_pos] << endl;
+			
+			stack_pos--;
+			my_pieces =   (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].whitePawns))) | (player == BLACK) * long(&(current_Board[stack_pos].blackPawns)));
+			your_pieces = (ULONG*)(((player == WHITE) * long(&(current_Board[stack_pos].blackPawns))) | (player == BLACK) * long(&(current_Board[stack_pos].whitePawns)));
+			
+			
+			switch (next_Test[stack_pos]){
+				case F35:
+					goto Test_F35;
+				case B4:
+					goto Test_B4;
+				case B35:
+					goto Test_B35;
+				case INC:
+					goto Ret;
+			}
+			
 		}
 		
 	}else{ // sliding_pieces
 		
-		current_Board[0] = main_Board;
 		switch (next_Test[0]) {
 			case INC:
 				cout << "Increment and Continue" << endl;
