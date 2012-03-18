@@ -5,6 +5,8 @@
 *.dll
 *.exe
 *.o
+*.o~>
+*.o~?
 *.obj
 *.so
 
@@ -34,3 +36,4 @@
 ehthumbs.db
 Icon?
 Thumbs.db
+>>>>>>> MoveGeneration

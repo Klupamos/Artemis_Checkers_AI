@@ -19,43 +19,12 @@ using std::endl;
 
 using namespace std;
 
-#include "FFNN.h"
+#include "Person.h"
 
 int main(int argc, char * const argv[]){
 
-/*
-	board NULLBOARD;
-	board testBoard(0x00000FFF, 0xFFF00000, 0x00000000);
-	
-	moveGenerator mg(moveGenerator::WHITE, testBoard);
-	
-	while (mg.curBoard() != NULLBOARD){
-		mg.curBoard().printBoard();
-		mg.nextBoard();
-	}
-*/	
-/*	
-	mg = moveGenerator(moveGenerator::BLACK, testBoard);
-	while (*mg != NULLBOARD){
-		(*mg).printBoard();
-		++mg;
-	}
-*/
-	
-	FFNN human;
-	FFNN mutant;
-
-	float output;
-	float input[def_input_layer];
-
-	FFNN_setup(&human);
-	FFNN_setup(&mutant);
-
-	FFNN_mutate(&mutant, &human);
-
-	FFNN_printNetwork(&human, input, output);
-	FFNN_printNetwork(&mutant, input, output);
 
 
 	return 0;
 }
+
