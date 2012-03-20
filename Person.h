@@ -7,3 +7,11 @@
  *
  */
 
+#ifndef FILE_PERSON_H_INCLUDED
+#define FILE_PERSON_H_INCLUDED
+
+enum player_t {WHITE, BLACK};
+
+player_t operator!(const player_t & p);
+
+#endif //FILE_PERSON_H_INCLUDED

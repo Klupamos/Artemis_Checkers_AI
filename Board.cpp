@@ -45,11 +45,3 @@ void board::printBoard(){
 	}
 	cout << endl << endl;
 }
-
-bool operator==(const board & lhs, const board & rhs){
-	return (lhs.whitePawns == rhs.whitePawns && lhs.blackPawns == rhs.blackPawns && lhs.kings == rhs.kings);
-};
-bool operator!=(const board & lhs, const board & rhs){
-	return !(lhs == rhs);
-};
-

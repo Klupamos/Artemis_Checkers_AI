@@ -8,23 +8,25 @@
  */
 
 #include <iostream>
-using std::cout;
-using std::cerr;
-using std::endl;
-
 #include <fstream>
 #include <iostream>
-
 #include <cstdlib>	// for std::size_t and drand48
 
 using namespace std;
 
-#include "Person.h"
+#include "Board.h"
+
+#include "IDS.h"
+
 
 int main(int argc, char * const argv[]){
 
+	board testBoard(0x00000FFF, 0xFFF00000, 0);
+	testBoard.printBoard();
 
+	IDS test(testBoard);
 
-	return 0;
+	test.search();
+	test.get().printBoard();
 }
 

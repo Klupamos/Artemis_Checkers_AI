@@ -36,8 +36,17 @@ public:
 	
 	void printBoard();
 	
-	friend bool operator==(const board & lhs, const board & rhs);
-	friend bool operator!=(const board & lhs, const board & rhs);
+	inline	operator bool() const{
+		return (whitePawns | blackPawns) > 0;
+	};
+	
+	inline	bool operator==(const board & rhs){
+		return (this->whitePawns == rhs.whitePawns && this->blackPawns == rhs.blackPawns && this->kings == rhs.kings);
+	};
+	
+	inline	bool operator!=(const board & rhs){
+		return !(*this == rhs);
+	};
 	
 };
 

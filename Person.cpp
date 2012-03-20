@@ -9,3 +9,10 @@
 
 #include "Person.h"
 
+player_t operator!(const player_t & p){
+	if (p == WHITE){
+		return BLACK;
+	}else{
+		return WHITE;
+	}
+};

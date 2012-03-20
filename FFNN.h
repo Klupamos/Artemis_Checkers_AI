@@ -10,19 +10,23 @@
 #ifndef FILE_FFNN_H_INCLUDED
 #define FILE_FFNN_H_INCLUDED
 
+#include "mtrand.h"
+
+#include "Board.h"
+#include "Person.h"
 
 //define network layout
 #define	def_total_layers	(4)
 #define	def_layer_space		def_total_layers*sizeof(int)
 #define	init_layers_macro(layer)	\
-layer[0]=4;\
-layer[1]=3;\
-layer[2]=2;\
-layer[3]=1;
-#define def_input_layer		(4)
-#define def_total_values	((3+1) + (2+2))
+layer[0]=36;\
+layer[1]=40;\
+layer[2]=10;\
+layer[3]=1;1
+#define def_input_layer		(36)
+#define def_total_values	((40+0) + (10+2))
 #define def_value_space		def_total_values*sizeof(float)
-#define	def_total_weights	((4+0)*3 + (3+1)*2 + (2+2)*1)
+#define	def_total_weights	((36+0)*40 + (40+0)*10 + (10+2)*1)
 #define def_weight_space	def_total_weights*sizeof(float)
 #define	def_ptr_space		2*(def_total_layers*sizeof(float*))
 #define	def_struct_space	def_value_space + def_weight_space + def_layer_space + def_ptr_space
@@ -42,21 +46,26 @@ struct FFNN {
 	float** aligned_values;
 	float**	aligned_weights;	
 	
-	size_t layers_size;
+	int layers_size;
 	int* layers;
 
 	float king_value;
 	double variance;
+
+public:
+	static MTRand_closed randGen;
 };
 	
-float randNorm(double);
+	float randNorm(double);
 
 	void FFNN_setup(FFNN*);	// set up the network
 
-	void FFNN_mutate(FFNN*, FFNN*); //this becomes a mutant of other	
+	void FFNN_mutate(FFNN*, FFNN*);						//this becomes a mutant of other	
 	float FFNN_calculateOutputs(FFNN*, float*);			// outputs from the neural network
+	float FFNN_calculateOutputs(FFNN*, const board &, player_t);
 
 	void FFNN_printNetwork(FFNN*, float*, float);
+	void FFNN_printNetwork(FFNN*, const board &, float);
 
 	std::istream & operator>>(std::istream &, FFNN &);
 	std::ostream & operator<<(std::ostream &, const FFNN &);

@@ -10,49 +10,8 @@
 #include <iostream>
 using std::cout; using std::endl;
 
-#include "moveGenerator.h"
-
-
-void board::printBoard(){
-	//cout << "Board" << endl;
-	
-	ULONG WK = kings & whitePawns;
-	ULONG WP = whitePawns;
-	ULONG BK = kings & blackPawns;
-	ULONG BP = blackPawns;
-	
-	for(ULONG i=0x80000000; i>0; i = i>>1){
-				
-		if (i & 0x80808080)
-			cout << "  ";
-		
-		if( WK & i){
-			cout << "WK";
-		}else if( WP & i){
-			cout << "WW";
-		}else if( BK & i){
-			cout << "BK";
-		}else if( BP & i){
-			cout << "BB";
-		}else{
-			cout << "--";
-		}
-		cout << "  ";
-		
-		if (i & 0x11111111)
-			cout << endl;
-	}
-	cout << endl << endl;
-}
-
-bool operator==(const board & lhs, const board & rhs){
-	return (lhs.whitePawns == rhs.whitePawns && lhs.blackPawns == rhs.blackPawns && lhs.kings == rhs.kings);
-};
-bool operator!=(const board & lhs, const board & rhs){
-	return !(lhs == rhs);
-};
-
-
+#include "MoveGenerator.h"
+#include "Person.h"
 
 moveGenerator::moveGenerator(player_t p = WHITE, board newBoard = board()):player(p), main_Board(newBoard), stack_pos(0){
 	current_Piece[0] = 1;
@@ -75,7 +34,12 @@ moveGenerator::moveGenerator(player_t p = WHITE, board newBoard = board()):playe
 	my_pieces =   (ULONG*)(((player == WHITE) * long(&(current_Board[0].whitePawns))) | (player == BLACK) * long(&(current_Board[0].blackPawns)));
 	your_pieces = (ULONG*)(((player == WHITE) * long(&(current_Board[0].blackPawns))) | (player == BLACK) * long(&(current_Board[0].whitePawns)));
 
-	my_movable_pieces = *my_pieces & ((jumping_pieces) | (sliding_pieces) * (jumping_pieces==0));
+	
+	sliding_pieces = sliders(player);
+	jumping_pieces = jumpers(player);	
+	
+	
+	my_movable_pieces = *my_pieces & ((jumping_pieces) | (sliding_pieces) * !bool(jumping_pieces));
 	// my_pieces = jumping_pieces OR my_pieces = sliding_pieces
 		
 	
@@ -86,7 +50,6 @@ moveGenerator::moveGenerator(player_t p = WHITE, board newBoard = board()):playe
 	
 	nextBoard(); //set first move
 }
-
 
 /*
 moveGenerator::ULONG moveGenerator::whiteMovers(){
@@ -195,7 +158,8 @@ moveGenerator::ULONG moveGenerator::blackJumpers(){
 }
 */
 
-// should be correct, but need to test
+
+// rewrite these to take no inputs
 ULONG moveGenerator::sliders( player_t player){
 	const ULONG openSquares = ~(main_Board.whitePawns | main_Board.blackPawns); // Not Occupied
  	ULONG One, Two;
@@ -680,10 +644,16 @@ board moveGenerator::curBoard(){
 board & moveGenerator::operator*(){
 	return this->current_Board[0];
 }
+
+board* moveGenerator::operator->(){
+	return &(this->current_Board[0]);
+}
+
 moveGenerator& moveGenerator::operator++(){		// ++x;
 	nextBoard();
 	return *this;
 }
+
 moveGenerator moveGenerator::operator++(int){	// x++
 	moveGenerator mg = *this;
 	nextBoard();
@@ -691,17 +661,19 @@ moveGenerator moveGenerator::operator++(int){	// x++
 }
 
 
+
 /*
 Max(board, a,b){
+ 
 	if (terminal(board))
-		retrn v;
+		retrn v = FFNN(board);
 	
 	v = -inf; // below minamum BEF 
 	for each move m from board {
 		v = maximum(v, Min(board(m), a, b));
 	}
 	
-	if (v >= b )//prune/
+	if (v >= b)//prune/
 		return v;
 	
 	a = maximum(a, v);
@@ -709,8 +681,9 @@ Max(board, a,b){
 
 		
 Min(board, a,b){
+ 
 	if (terminal(board))
-		retrn v;
+		retrn v = FFNN(board);
 	
 	v = inf; // above maximum BEF 
 	for each move m from board {
@@ -730,7 +703,10 @@ terminal(){
 }
 		
 Ab_search(board){
-	v = max(board, -inf, inf);
-	return v;
+ 
+	local_board = mg.current();
+
+	Max(board, inf, -inf);
+	
 }
 */
