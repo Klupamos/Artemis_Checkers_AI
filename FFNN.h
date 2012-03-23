@@ -13,7 +13,7 @@
 #include "mtrand.h"
 
 #include "Board.h"
-#include "Person.h"
+#include "Piece.h"
 
 //define network layout
 #define	def_total_layers	(4)
@@ -62,7 +62,7 @@ public:
 
 	void FFNN_mutate(FFNN*, FFNN*);						//this becomes a mutant of other	
 	float FFNN_calculateOutputs(FFNN*, float*);			// outputs from the neural network
-	float FFNN_calculateOutputs(FFNN*, const board &, player_t);
+	float FFNN_calculateOutputs(FFNN*, const board &);
 
 	void FFNN_printNetwork(FFNN*, float*, float);
 	void FFNN_printNetwork(FFNN*, const board &, float);

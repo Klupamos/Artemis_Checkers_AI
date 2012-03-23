@@ -7,9 +7,9 @@
  *
  */
 
-#include "Person.h"
+#include "Piece.h"
 
-player_t operator!(const player_t & p){
+piece_t operator!(const piece_t & p){
 	if (p == WHITE){
 		return BLACK;
 	}else{

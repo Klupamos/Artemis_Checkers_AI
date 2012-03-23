@@ -24,7 +24,8 @@ using std::size_t;
 
 
 #if defined(__APPLE__)
-	#include "/Developer/usr/lib/clang/1.7/include/immintrin.h"
+	#include <pmmintrin.h>
+	#include <tmmintrin.h>
 #else
 	#include <intrin.h>	// for _mm128, _mm_setzero_ps, _mm_load_ps, _mm_add_ps, _mm_mul_ps
 	// look at __m128 aligment allocator
@@ -32,16 +33,16 @@ using std::size_t;
 
 #include "FFNN.h"
 #include "Board.h"
-#include "Person.h"
+#include "Piece.h"
 
-MTRand_closed FFNN::randGen((unsigned long)time(NULL));
+MTRand_closed FFNN::randGen((unsigned long)time(NULL));// init random number generator
 
 /*	sigmoid()
 	Pre: None
 	Post: return == normalized value of x within (-1,1)
  */
 inline float sigmoid(float x){
-	return float(x / (0.25 + abs(x)));
+	return float(x / (0.25 + fabs(x)));
 }
 
 inline float randNorm(double variance){
@@ -134,8 +135,6 @@ void FFNN_mutate(FFNN* child, FFNN* parent){
 		for (int node = 0; node < parent->layers[l+1]; node++) {
 			for (int pre_node = 0; pre_node < parent->layers[l]; pre_node++, weight_index++) {
 				tmp = parent->aligned_weights[l][weight_index] + randNorm(parent->variance);
-				tmp = (tmp > 1.0 ? 1.0f : tmp);
-				tmp = (tmp < -1.0 ? -1.0f : tmp);
 				child->aligned_weights[l][weight_index] = tmp;
 			}
 			weight_index += (3&(4-weight_index));
@@ -234,14 +233,13 @@ float FFNN_calculateOutputs(FFNN* network, float* inputs){
 	return(sigmoid(total_sum));
 }
 
-float FFNN_calculateOutputs(FFNN* network, const board & bitboard, player_t p){
+float FFNN_calculateOutputs(FFNN* network, const board & bitboard){
 	
 	float inputs[def_input_layer];
 	
-	inputs[0] = float(p);
 	char white = 0;
 	char black = 0;
-	for(ULONG bit=1, index=4; index<def_input_layer; bit<<=1, index++){
+	for(ULONG bit=1, index=2; index<def_input_layer; bit<<=1, index++){
 		if(bitboard.whitePawns & bit){
 			inputs[index] = 1.0;
 			white++;
@@ -257,8 +255,8 @@ float FFNN_calculateOutputs(FFNN* network, const board & bitboard, player_t p){
 		}
 		
 	}
-	inputs[1] = white;
-	inputs[2] = black;
+	inputs[0] = white;
+	inputs[1] = black;
 	
 	
 	int l0 = network->layers[0];
@@ -308,6 +306,9 @@ float FFNN_calculateOutputs(FFNN* network, const board & bitboard, player_t p){
 				outputs = _mm_load_ps(network->aligned_values[l-1] + pre_node);
 				weights = _mm_load_ps(network->aligned_weights[l] + weights_thing);
 				
+				
+				
+				
 				// take thier dot product
 				weights = _mm_mul_ps(weights, outputs);		// weights *= outputs
 				sums = _mm_add_ps(sums, weights);			// sum += weights
@@ -320,7 +321,6 @@ float FFNN_calculateOutputs(FFNN* network, const board & bitboard, player_t p){
 			network->aligned_values[l][node] = sigmoid(total_sum);
 		}
 	}
-	
 	
 	// output layers
 	weights_thing = 0;
@@ -335,11 +335,14 @@ float FFNN_calculateOutputs(FFNN* network, const board & bitboard, player_t p){
 		// take thier dot product
 		weights = _mm_mul_ps(weights, outputs);		// weights *= outputs
 		sums = _mm_add_ps(sums, weights);			// sum += weights
+
 		weights_thing += 4;
 	}
 	sums = _mm_hadd_ps(sums, sums);
 	sums = _mm_hadd_ps(sums, sums); 
+	
 	_mm_store_ss(&total_sum, sums);
+	
 	return(sigmoid(total_sum));
 }
 
@@ -358,13 +361,13 @@ void FFNN_printNetwork(FFNN* network, float* inputs, float output){
 	
 	printf("Input Layer\n");
 	for(int n = 0; n<network->layers[l]; n++){
-		printf("%ld, %d) %.2f\n", l, n, inputs[n]);
+		printf("%d, %d) %.2f\n", l, n, inputs[n]);
 	}
 	
 	printf("Hidden Layers\n");
 	for(l=1; l<network->layers_size-1; l++){									
 		for(int n = 0; n<network->layers[l]; n++){							
-			printf("%ld,%d) %.2f\n", l, n, network->aligned_values[l-1][n]);							
+			printf("%d,%d) %.2f\n", l, n, network->aligned_values[l-1][n]);							
 			printf("\tWeights\n");
 			for(int pn = 0; pn<network->layers[l-1]; pn++){					
 				printf("\t%.2f\t", network->aligned_weights[l-1][n*(network->layers[l-1] + (3&(4-network->layers[l-1]))) + pn]);
@@ -374,7 +377,7 @@ void FFNN_printNetwork(FFNN* network, float* inputs, float output){
 	}
 	
 	printf("Output Layer\n");
-	printf("%ld, %d) %.2f\n",l, 0, output);
+	printf("%d, %d) %.2f\n",l, 0, output);
 	printf("\tWeights\n");
 	for(int pn = 0; pn<network->layers[l-1]; pn++){
 		printf("\t%.2f\t", network->aligned_weights[l-1][pn]);
@@ -388,10 +391,9 @@ void FFNN_printNetwork(FFNN* network, const board & bitboard, float output){
 	
 	float inputs[def_input_layer];
 	
-	inputs[0] = 3.0;
 	char white = 0;
 	char black = 0;
-	for(ULONG bit=1, index=4; index<def_input_layer; bit<<=1, index++){
+	for(ULONG bit=1, index=2; index<def_input_layer; bit<<=1, index++){
 		if(bitboard.whitePawns & bit){
 			inputs[index] = 1.0;
 			white++;
@@ -407,8 +409,9 @@ void FFNN_printNetwork(FFNN* network, const board & bitboard, float output){
 		}
 		
 	}
-	inputs[1] = white;
-	inputs[2] = black;
+	inputs[0] = white;
+	inputs[1] = black;
+	
 	
 	
 	int l=0;
@@ -419,13 +422,13 @@ void FFNN_printNetwork(FFNN* network, const board & bitboard, float output){
 	
 	printf("Input Layer\n");
 	for(int n = 0; n<network->layers[l]; n++){
-		printf("%ld, %d) %.2f\n", l, n, inputs[n]);
+		printf("%d, %d) %.2f\n", l, n, inputs[n]);
 	}
 	
 	printf("Hidden Layers\n");
 	for(l=1; l<network->layers_size-1; l++){									
 		for(int n = 0; n<network->layers[l]; n++){							
-			printf("%ld,%d) %.2f\n", l, n, network->aligned_values[l-1][n]);							
+			printf("%d,%d) %.2f\n", l, n, network->aligned_values[l-1][n]);							
 			printf("\tWeights\n");
 			for(int pn = 0; pn<network->layers[l-1]; pn++){					
 				printf("\t%.2f\t", network->aligned_weights[l-1][n*(network->layers[l-1] + (3&(4-network->layers[l-1]))) + pn]);
@@ -435,7 +438,7 @@ void FFNN_printNetwork(FFNN* network, const board & bitboard, float output){
 	}
 	
 	printf("Output Layer\n");
-	printf("%ld, %d) %.2f\n",l, 0, output);
+	printf("%d, %d) %.2f\n",l , 0, output);
 	printf("\tWeights\n");
 	for(int pn = 0; pn<network->layers[l-1]; pn++){
 		printf("\t%.2f\t", network->aligned_weights[l-1][pn]);

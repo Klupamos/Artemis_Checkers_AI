@@ -45,3 +45,7 @@ void board::printBoard(){
 	}
 	cout << endl << endl;
 }
+
+bool board::winner(){
+	return (whitePawns == 0 || blackPawns == 0);
+}
