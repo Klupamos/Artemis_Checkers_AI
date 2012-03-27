@@ -14,7 +14,7 @@ using std::cout; using std::endl;
 #include "Board.h"
 
 
-void board::printBoard(){
+void board::printBoard() const{
 	//cout << "Board" << endl;
 	
 	ULONG WK = kings & whitePawns;
@@ -46,6 +46,6 @@ void board::printBoard(){
 	cout << endl << endl;
 }
 
-bool board::winner(){
+bool board::winner() const{
 	return (whitePawns == 0 || blackPawns == 0);
 }

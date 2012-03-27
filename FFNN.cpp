@@ -332,6 +332,7 @@ float FFNN_calculateOutputs(FFNN* network, const board & bitboard){
 		outputs = _mm_load_ps(network->aligned_values[def_total_layers-3] + pre_node);
 		weights = _mm_load_ps(network->aligned_weights[def_total_layers-2] + weights_thing);
 		
+
 		// take thier dot product
 		weights = _mm_mul_ps(weights, outputs);		// weights *= outputs
 		sums = _mm_add_ps(sums, weights);			// sum += weights
@@ -342,7 +343,8 @@ float FFNN_calculateOutputs(FFNN* network, const board & bitboard){
 	sums = _mm_hadd_ps(sums, sums); 
 	
 	_mm_store_ss(&total_sum, sums);
-	
+
+
 	return(sigmoid(total_sum));
 }
 
@@ -451,17 +453,43 @@ void FFNN_printNetwork(FFNN* network, const board & bitboard, float output){
 	Pre: None
 	Post: None
  */
-std::istream & operator>>(std::istream & theStream, FFNN network){
+std::istream & operator>>(std::istream & theStream, FFNN & network){
 	
-	theStream.read((char*)&(network.layers_size), sizeof(size_t));
+	theStream.read((char*)&(network.layers_size), sizeof(int));
 	if(network.layers_size != def_total_layers){
 		std::exception e;
 		throw(e);
 	}
 	
+	
+	long mem_offset = (((long)network._main_memmory + 15) & (~0x0F));
+	mem_offset += (def_value_space + def_weight_space);
+	network.layers = (int*)(mem_offset);
+	network.aligned_values = (float**)(mem_offset += def_layer_space);
+	network.aligned_weights = (float**)(mem_offset += def_ptr_space/2);
+	
+	//reset to point to the weight_space
+	long value_offset = (((long)network._main_memmory + 15) & (~0x0F)); 
+	long weight_offset = value_offset + def_value_space; 
+	
+	// initialize new memmory
+//	init_layers_macro(network.layers);
 	theStream.read((char*)(network.layers), def_layer_space);
+
+	int  last_layer_size;
+	for(size_t l=0; l<def_total_layers-1; l++){		
+		// allocate space for values
+		network.aligned_values[l] = (float*)(value_offset);
+		value_offset += (network.layers[l+1] + (3&(4-network.layers[l+1]))) * sizeof(float);
+		
+		// allocate space for weights
+		network.aligned_weights[l] = (float*)(weight_offset);
+		last_layer_size = (network.layers[l] + (3&(4-network.layers[l])));
+		weight_offset += (network.layers[l+1] * last_layer_size) * sizeof(float);
+	}
 	theStream.read((char*)(network.aligned_weights[0]), def_weight_space);
 	
+
 	theStream.read((char*)&(network.king_value), sizeof(float));
 	theStream.read((char*)&(network.variance), sizeof(double));
 	
@@ -472,10 +500,10 @@ std::istream & operator>>(std::istream & theStream, FFNN network){
 	Pre: None
 	Post: None
  */
-std::ostream & operator<<(std::ostream & theStream, const FFNN &network){
+std::ostream & operator<<(std::ostream & theStream, const FFNN & network){
 	
 	
-	theStream.write((char*)&(network.layers_size), sizeof(size_t));
+	theStream.write((char*)&(network.layers_size), sizeof(int));
 	theStream.write((char*)(network.layers), def_layer_space);
 	theStream.write((char*)(network.aligned_weights[0]), def_weight_space);
 	

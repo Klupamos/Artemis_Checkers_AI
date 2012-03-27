@@ -13,15 +13,10 @@
 #include <boost/chrono.hpp>
 #include <boost/thread.hpp>
 
-
 #include "FFNN.h"
 #include "Board.h"
 #include "MoveGenerator.h"
 #include "Piece.h"
-
-//#define move_time_limit	boost::chrono::seconds(2)
-#define move_time_limit	boost::chrono::milliseconds(2000)
-
 
 class Player { // can also be thought of as the player
 public:
@@ -30,37 +25,53 @@ public:
 	
 private:
 	piece_t my_color;
+	FFNN evaluator;
+	board root;
+	
 	
 	clock::time_point deadline;
-	
-	board root;
-
 	boost::thread_group branches;
+	boost::mutex cout_lock;// look at upgrade_locks and shared_locks	
+	
+	int node_count;
 	
 	board yourBest;
 	
-	FFNN evaluator;
+	boost::mutex alpha_lock;
+	float global_alpha;
 
-	boost::mutex cout_lock;
-	boost::mutex board_lock;	// look at upgrade_locks and shared_locks
-	board return_board;
+	boost::mutex beta_lock;
+	float global_beta;
+
+	boost::mutex board_lock;
 	float return_board_val;
+	board return_board;
+	
 	
 public:
 	Player();
+
+	void toString();
+
 	bool newboard(board);
 	void search();
-	void parallelSearch(int, board);
+	board getmove();
+	
+
 	void serialSearch();
-	board get();
-
-private:	
-	float bestBoard(piece_t p, board b, int current_depth, int max_depth);
-	float worstBoard(piece_t p, board b, int current_depth, int max_depth);
-	bool terminal(board b, int current_depth, int max_depth);
-
+private:
 	void startTimmer();
 	
+	void parallelSearch(int, const board & );
+	
+	
+	float bestBoard(piece_t, const board &, int, float, float);
+	float worstBoard(piece_t, const board &, int, float, float);
+	bool terminal(const board &, int);
+
+
+friend std::istream & operator>>(std::istream &, Player &);
+friend std::ostream & operator<<(std::ostream &, const Player &);
 };
 
 

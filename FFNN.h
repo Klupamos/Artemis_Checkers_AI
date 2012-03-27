@@ -22,7 +22,7 @@
 layer[0]=36;\
 layer[1]=40;\
 layer[2]=10;\
-layer[3]=1;1
+layer[3]=1;
 #define def_input_layer		(36)
 #define def_total_values	((40+0) + (10+2))
 #define def_value_space		def_total_values*sizeof(float)

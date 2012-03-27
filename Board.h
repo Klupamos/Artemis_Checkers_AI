@@ -34,8 +34,8 @@ public:
 	board():whitePawns(0), blackPawns(0), kings(0){};
 	board(ULONG w, ULONG b, ULONG k):whitePawns(w), blackPawns(b), kings(k){};
 	
-	void printBoard();
-	bool winner();
+	void printBoard() const;
+	bool winner() const;
 
 	inline	operator bool() const{
 		return (whitePawns | blackPawns) > 0;
