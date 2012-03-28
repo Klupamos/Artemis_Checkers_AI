@@ -10,7 +10,9 @@
 #ifndef FILE_BOARD_H_INCLUDED
 #define FILE_BOARD_H_INCLUDED
 
-typedef unsigned long	ULONG;
+#include <stdint.h>
+typedef uint32_t	ULONG;
+
 
 class board{
 public:

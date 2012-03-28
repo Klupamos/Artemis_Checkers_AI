@@ -13,7 +13,10 @@
 #include "Board.h"
 #include "Piece.h"
 
-typedef unsigned long	ULONG;
+#include <stdint.h>
+typedef uint32_t	ULONG;
+
+
 
 class moveGenerator{
 public:
@@ -21,7 +24,8 @@ public:
 		MASK_F3 = 0x00E0E0E0,
 		MASK_F5 = 0x07070707,
 		MASK_B3 = 0x07070700,
-		MASK_B5 = 0xE0E0E0E0
+		MASK_B5 = 0xE0E0E0E0,
+		MASK_BACK_ROW = 0xF000000F
 	};
 	
 	enum Direction {F4, F35, B4, B35, INC};
@@ -55,7 +59,7 @@ public:
 	moveGenerator operator++(int);
 	
 private:
-
+public://debug
 	ULONG sliders(piece_t);
 	ULONG jumpers(piece_t);
 };

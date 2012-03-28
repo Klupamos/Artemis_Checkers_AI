@@ -70,10 +70,6 @@ ULONG moveGenerator::jumpers(piece_t player){	// true == white to move
 	const ULONG openSquares = ~(main_Board.blackPawns | main_Board.whitePawns);
  	ULONG movers = 0;
  	ULONG tmp = 0;
-
-	
- 	
-	
 	
 	ULONG One, Two, Three;
 	if(player == WHITE){
@@ -188,7 +184,8 @@ void moveGenerator::nextBoard(){
 //			cout << ": 0" << endl;
 			
 		Test_F35:
-//			cout << "Testing F35";
+//			cout << "Testing F35\n";
+			//cout << "\t" << (mid_space << 4) << "\t";
 			if (
 				(
 				 (current_Piece[stack_pos] & MASK_F3 & (current_Board[stack_pos].whitePawns | (current_Board[stack_pos].blackPawns & current_Board[stack_pos].kings)) ) &&
@@ -199,7 +196,6 @@ void moveGenerator::nextBoard(){
 				)
 				&&
 				(end_space = (mid_space << 4) & ~(*my_pieces | *your_pieces))
-				
 				){
 //				cout << ": 1" << endl;
 				end_of_chain[stack_pos] = false;

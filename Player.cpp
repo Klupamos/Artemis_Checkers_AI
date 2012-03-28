@@ -25,8 +25,8 @@ using std::min;
 #include "Piece.h"
 
 //#define move_time_limit	boost::chrono::milliseconds(30000)
-#define move_time_limit	boost::chrono::seconds(5)
-#define search_start_height	4
+#define move_time_limit	boost::chrono::seconds(2)
+#define search_start_height 7
 
 /*
  my move{
@@ -44,14 +44,14 @@ using std::min;
  }
  */
 
-Player::Player():node_count(0){
+Player::Player(piece_t color = WHITE):node_count(0){
 	root = board(0x00000FFF, 0xFFF00000, 0);
 
 	FFNN_setup(&evaluator);	
 
 	return_board = board();
 	
-	my_color = WHITE;
+	my_color = color;
 
 	if (my_color == WHITE){
 		return_board_val = 2.0;
@@ -90,7 +90,7 @@ void Player::serialSearch(){
 	return_board_val *= -1;
 	
 	global_alpha = -2.0;	// redundant from Player::search()
-	global_beta = 2.0;		// debug/test code
+	global_beta = 2.0;		//debug/test code
 
 	int current_height = search_start_height;
 	moveGenerator default_move(my_color, root);
@@ -99,7 +99,7 @@ void Player::serialSearch(){
 
 	try {
 		while (true){
-			cout << "Searching Depth: " << current_height << endl;
+			
 			moveGenerator mg(my_color, root);
 			
 			cout_lock.lock();
@@ -124,8 +124,8 @@ void Player::serialSearch(){
 				mg++;
 				
 			}
+			cout << "Finished Ply: " << current_height << endl;//debug
 			current_height++;
-			break;//debug code
 		}
 	}
 	catch (int e) {
@@ -183,7 +183,7 @@ float Player::worstBoard(piece_t p, const board & b, int current_height, float a
 bool Player::terminal(const board & b, int current_height){
 	
 	cout_lock.lock();
-	node_count++;
+	node_count++;		//debug
 	cout_lock.unlock();
 	
 	
@@ -194,7 +194,9 @@ bool Player::terminal(const board & b, int current_height){
 		return true;
 	
 	if(clock::now() >= deadline){ //ran out of time
-		cerr << "Throwing out of time error" << endl;
+//		cout_lock.lock();
+//		cerr << "Throwing out of time error" << endl; //debug
+//		cout_lock.unlock();
 		throw -1;
 	}
 
@@ -210,10 +212,10 @@ bool Player::terminal(const board & b, int current_height){
 // does the actuall searching
 void Player::parallelSearch(int lane_no, const board  & my_root){
 	int current_height = search_start_height-1;
-	
+
 	while(true){
+		
 		cout_lock.lock();
-		//cout << "(" << lane_no << ") Max Depth: " << current_height << endl;
 		node_count++;
 		cout_lock.unlock();
 
@@ -232,9 +234,9 @@ void Player::parallelSearch(int lane_no, const board  & my_root){
 					}
 					
 					if(global_alpha > global_beta){
-						break;
+						alpha_lock.unlock();
+						break;//debug??
 					}
-					
 					alpha_lock.unlock();
 
 
@@ -254,10 +256,9 @@ void Player::parallelSearch(int lane_no, const board  & my_root){
 					}
 					
 					if(global_beta < global_alpha){
-						break;
+						beta_lock.unlock();
+						break;//debug??
 					}
-					
-					
 					beta_lock.unlock();
 
 					board_lock.lock();
@@ -272,21 +273,26 @@ void Player::parallelSearch(int lane_no, const board  & my_root){
 			}
 			catch (int e) {
 				if (e == -1){
-					boost::this_thread::interruption_point();
+/*//debug					cout_lock.lock();
+					cerr << "Interupting Thread" << endl; //debug
+					cout_lock.unlock();
+*/					boost::this_thread::interruption_point();
 				}else{
 					cerr << "Unknown error: " << e << endl;
 					throw e;
 				}
 			}
-			
-
 			mg++;
 			
 			boost::this_thread::interruption_point();
 		}
-		
-		//current_height++;
-		break;// debug code
+/*//debug		
+		cout_lock.lock();
+		cout << "(" << lane_no << ") Finished Ply: " << current_height+1 << endl;
+		cout_lock.unlock();
+*/
+		current_height++;
+		//break;// debug code
 	}	
 }
 
@@ -319,9 +325,9 @@ void Player::search(){
 	while (*my_moves){
 		lane_no++;
 		
-		cout_lock.lock();
-		cout << "(Master) Creating thread: " << lane_no << endl;
-		cout_lock.unlock();
+//		cout_lock.lock();
+//debug		cout << "(Master) Creating thread: " << lane_no << endl;
+//		cout_lock.unlock();
 		
 		//move_lanes[lane_no] = *my_moves;
 		try{
@@ -346,10 +352,6 @@ void Player::search(){
 			cerr << "Unknown error" << cout;
 		}
 		my_moves++;
-		
-		
-//		if (lane_no >= 1)	// debug code
-//			break;
 	}
 	
 	if(!threaded){	// will try serial search
@@ -371,8 +373,10 @@ void Player::search(){
 	
 	clock::time_point real_stop = clock::now();
 	boost::chrono::duration<double>	lifespan = (real_stop - real_start);
-	cout << "(Master) total time for search: " << lifespan  << endl;
-	cout << "Counted nodes: " << node_count << endl;
+//	cout_lock.lock(); //debug	
+//	cout << "(Master) total time for search: " << lifespan  << endl;
+//	cout << "Counted nodes: " << node_count << endl;
+//	cout_lock.unlock();
 }
 
 // returns the current best board

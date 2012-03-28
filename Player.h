@@ -49,7 +49,7 @@ private:
 	
 	
 public:
-	Player();
+	Player(piece_t);
 
 	void toString();
 
