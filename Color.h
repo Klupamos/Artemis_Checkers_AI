@@ -10,8 +10,8 @@
 #ifndef FILE_PIECE_H_INCLUDED
 #define FILE_PIECE_H_INCLUDED
 
-enum piece_t {WHITE, BLACK};
+enum color_t {WHITE, BLACK};
 
-piece_t operator!(const piece_t & p);
+color_t operator!(const color_t & p);
 
 #endif //FILE_PIECE_H_INCLUDED

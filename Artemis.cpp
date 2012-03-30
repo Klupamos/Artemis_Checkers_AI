@@ -16,8 +16,11 @@ using std::endl;
 
 #include <cstdlib>	// for std::size_t and drand48
 
+#include <boost/chrono.hpp>
+typedef boost::chrono::steady_clock	steady_clock;
+
 #include "Board.h"
-#include "Piece.h"
+#include "Color.h"
 #include "Player.h"
 #include "moveGenerator.h"
 
@@ -27,17 +30,9 @@ using std::endl;
 	#define test_file	"/Users/greg/Dropbox/School/Current/CS_405/Artemis.nn"
 #endif
 
+
 int main(int argc, char * const argv[]){
-	
-/*		
-	board test(1<<19, 0xF8800000, 0);
-	test.printBoard();
-	
-	moveGenerator x(WHITE, test);
-*/	
-
-
-	
+		
 /*
 	std::ofstream ofile(test_file, std::ofstream::binary);
 	ofile << Artemis;
@@ -58,36 +53,64 @@ int main(int argc, char * const argv[]){
 	ifile.close();
 */
 
-	board startBoard(0x00000FFF, 0xFFF00000, 0);
-	startBoard.printBoard();
+	board officialBoard(0x00000FFF, 0xFFF00000, 0);
+	officialBoard.printBoard();
 
-	Player truth(WHITE);
-	Player justice(BLACK);
+	Player MrBlack(WHITE);
+	Player MrWhite(BLACK);
 	
-	piece_t active_player = WHITE;
+	color_t active_player = WHITE;
 	size_t moves=0;
 	
-	while (!startBoard.winner()) {
+	
+	steady_clock::time_point game_start = steady_clock::now();
+	do{
+		moves++;
 		cout << "Turn: " << moves << endl;
 		if(active_player == WHITE){
-			if(!truth.newboard(startBoard)){
-				std::cerr << active_player << " calls cheater" << endl;
+			if(!MrBlack.newboard(officialBoard)){
+				std::cerr << "MrBlack calls cheater" << endl;
+				cout << "No connection from" << endl;
+				MrBlack.getmove().printBoard();
 				exit(-1);
 			}
-			truth.search();
-			startBoard = truth.getmove();
+			MrBlack.search();
+			officialBoard = MrBlack.getmove();
 		}else{
-			if(!justice.newboard(startBoard)){
-				std::cerr << active_player << " calls cheater" << endl;
+			if(!MrWhite.newboard(officialBoard)){
+				std::cerr << "MrWhite calls cheater" << endl;
+				cout << "No connection from" << endl;
+				MrWhite.getmove().printBoard();
 				exit(-1);
 			}
-			justice.search();
-			startBoard = justice.getmove();
+			MrWhite.search();
+			officialBoard = MrWhite.getmove();
 		}
 		
-		startBoard.printBoard();
-		moves++;
+		officialBoard.printBoard();
+		
 		active_player = !active_player;
+	}while (!officialBoard.winner());
+	
+	steady_clock::time_point game_end = steady_clock::now();
+	boost::chrono::duration<double> d = game_end - game_start;
+	
+	cout << "Game time: " << d << endl;
+	cout << (d)/moves << " per move" << endl;
+	
+	if(officialBoard.whitePawns){
+		MrBlack.victory();
+		MrWhite.defeat();
+	}else{
+		MrWhite.victory();
+		MrBlack.defeat();
 	}
+	
+	cout << "White" << endl;
+	cout << MrBlack.toString() << endl;
+	
+	cout << "Black" << endl;
+	cout << MrWhite.toString() << endl;
+	
 }
 

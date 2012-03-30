@@ -12,6 +12,11 @@
 using std::cout;
 using std::endl;
 
+#include <sstream>
+
+#include <string>
+
+
 #include <cstdlib>		// for std::size_t and drand48
 using std::size_t;
 
@@ -33,7 +38,7 @@ using std::size_t;
 
 #include "FFNN.h"
 #include "Board.h"
-#include "Piece.h"
+#include "Color.h"
 
 MTRand_closed FFNN::randGen((unsigned long)time(NULL));// init random number generator
 
@@ -45,6 +50,11 @@ inline float sigmoid(float x){
 	return float(x / (0.25 + fabs(x)));
 }
 
+
+/*	randNorm()
+	Pre: None
+	Post: returns a random number between [-variance, variance] from a normal distribution
+ */
 inline float randNorm(double variance){
 	double norm = 0.0;
 	norm += random_function + random_function;
@@ -62,7 +72,7 @@ inline float randNorm(double variance){
 
 	example with passed values (argc = 4 , argv = {2,3,2,1}){
 		layers_size = argc
-		aligned_values = {0,1,x,x,  2,3,4,x,  5,6,x,x,  7,7,7,7}
+		aligned_values = {2,3,4,x,  5,6,x,x}
 		w1 = {0,1,x,x, 0,1,x,x, 0,1,x,x, ...}
 		w2 = {2,3,4,x, 2,3,4,x, ...}
 		w3 = {5,6,x,x, ...}
@@ -233,13 +243,13 @@ float FFNN_calculateOutputs(FFNN* network, float* inputs){
 	return(sigmoid(total_sum));
 }
 
-float FFNN_calculateOutputs(FFNN* network, const board & bitboard){
+float FFNN_calculateOutputs(FFNN* network, const board & bitboard, color_t c){
 	
 	float inputs[def_input_layer];
 	
 	char white = 0;
 	char black = 0;
-	for(ULONG bit=1, index=2; index<def_input_layer; bit<<=1, index++){
+	for(ULONG bit=1, index=4; index<def_input_layer; bit<<=1, index++){
 		if(bitboard.whitePawns & bit){
 			inputs[index] = 1.0;
 			white++;
@@ -257,6 +267,8 @@ float FFNN_calculateOutputs(FFNN* network, const board & bitboard){
 	}
 	inputs[0] = white;
 	inputs[1] = black;
+	inputs[2] = c;
+	inputs[3] = 1.0;
 	
 	
 	int l0 = network->layers[0];
@@ -395,7 +407,7 @@ void FFNN_printNetwork(FFNN* network, const board & bitboard, float output){
 	
 	char white = 0;
 	char black = 0;
-	for(ULONG bit=1, index=2; index<def_input_layer; bit<<=1, index++){
+	for(ULONG bit=1, index=4; index<def_input_layer; bit<<=1, index++){
 		if(bitboard.whitePawns & bit){
 			inputs[index] = 1.0;
 			white++;
@@ -413,6 +425,8 @@ void FFNN_printNetwork(FFNN* network, const board & bitboard, float output){
 	}
 	inputs[0] = white;
 	inputs[1] = black;
+	inputs[2] = 14.0; // just for printing
+	inputs[3] = 1.0;
 	
 	
 	
@@ -515,5 +529,10 @@ std::ostream & operator<<(std::ostream & theStream, const FFNN & network){
 }
 
 
-
+std::string FFNN_toString(const FFNN & network){
+	std::stringstream report(std::stringstream::out);
+	report << "King value: " << network.king_value << endl;
+	report << "Variance:   " << network.variance << endl;
+	return report.str();
+}
 

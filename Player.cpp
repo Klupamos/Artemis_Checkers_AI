@@ -15,6 +15,9 @@ using std::endl;
 using std::max;
 using std::min;
 
+#include <sstream>
+#include <string>
+
 #include <boost/chrono.hpp>
 #include <boost/thread.hpp>
 
@@ -22,11 +25,11 @@ using std::min;
 #include "FFNN.h"
 #include "Board.h"
 #include "MoveGenerator.h"
-#include "Piece.h"
+#include "Color.h"
 
 //#define move_time_limit	boost::chrono::milliseconds(30000)
 #define move_time_limit	boost::chrono::seconds(2)
-#define search_start_height 7
+#define search_start_height 6
 
 /*
  my move{
@@ -44,7 +47,7 @@ using std::min;
  }
  */
 
-Player::Player(piece_t color = WHITE):node_count(0){
+Player::Player(color_t color = WHITE):turny_points(0), games_played(0){
 	root = board(0x00000FFF, 0xFFF00000, 0);
 
 	FFNN_setup(&evaluator);	
@@ -54,11 +57,11 @@ Player::Player(piece_t color = WHITE):node_count(0){
 	my_color = color;
 
 	if (my_color == WHITE){
-		return_board_val = 2.0;
+		return_board_val = -2.0;
 		// start searching for my move
 		// timedSearch()
 	}else{
-		return_board_val = -2.0;
+		return_board_val = 2.0;
 		// pop off a thread to search for your move
 	}
 };
@@ -69,15 +72,13 @@ bool Player::newboard(board newb){
 	root = newb;
 	if(bool(return_board)){	//Check for cheaters
 		moveGenerator nextmove(!my_color, return_board);
-		bool valid = false;
 		while (*nextmove) {
 			if (*nextmove == newb){
-				valid = true;
-				break;
+				return true;
 			}
 			nextmove++;
 		}
-		return valid;
+		return false;
 	}
 	return true;
 }
@@ -86,36 +87,33 @@ void Player::startTimmer(){
 	deadline = clock::now() + move_time_limit;
 }
 
-void Player::serialSearch(){
-	return_board_val *= -1;
-	
-	global_alpha = -2.0;	// redundant from Player::search()
-	global_beta = 2.0;		//debug/test code
-
+void Player::serialSearch(){	
 	int current_height = search_start_height;
-	moveGenerator default_move(my_color, root);
-	return_board = *default_move; // assume first move is best until proven otherwise
-	default_move.~moveGenerator();
-
+	
 	try {
+		global_alpha = -2.0;	// redundant
+		global_beta = 2.0;		//  from search
+		return_board_val = (my_color == WHITE ? -2.0 : 2.0 ); //each itteration starts with the same value
 		while (true){
 			
 			moveGenerator mg(my_color, root);
 			
-			cout_lock.lock();
-			node_count++;
-			cout_lock.unlock();
+//			cout_lock.lock();
+//			node_count++;		//debug
+//			cout_lock.unlock();
 			
 			while (*mg){
-				if(my_color == WHITE){					
+				if(my_color == WHITE){
 					global_alpha = max(global_alpha, worstBoard(!my_color, *mg, current_height-1, global_alpha, global_beta));
 					if(global_alpha > return_board_val){
+//						cout << "New board: " << global_alpha << " vs " << return_board_val << endl; //debug
 						return_board_val = global_alpha;
 						return_board = *mg;
 					}
 				}else{
 					global_beta = min(global_beta, bestBoard(!my_color, *mg, current_height-1, global_alpha, global_beta));
 					if(global_beta < return_board_val){
+//						cout << "New board: " << global_beta << " vs " << return_board_val << endl; //debug
 						return_board_val = global_beta;
 						return_board = *mg;
 					}
@@ -124,7 +122,7 @@ void Player::serialSearch(){
 				mg++;
 				
 			}
-			cout << "Finished Ply: " << current_height << endl;//debug
+//			cout << "Finished Ply: " << current_height << endl;//debug
 			current_height++;
 		}
 	}
@@ -135,13 +133,13 @@ void Player::serialSearch(){
 		}
 	}
 
-	cout << "Counted nodes: " << node_count << endl;
+//	cout << "Counted nodes: " << node_count << endl;
 }
 
-float Player::bestBoard(piece_t p,const board & b, int current_height, float alpha, float beta){
+float Player::bestBoard(color_t p,const board & b, int current_height, float alpha, float beta){
 		// I am terminal, so return my value
 		if (terminal(b, current_height)){
-			return FFNN_calculateOutputs(&evaluator, b);
+			return FFNN_calculateOutputs(&evaluator, b, p);
 		}
 		
 		
@@ -159,10 +157,10 @@ float Player::bestBoard(piece_t p,const board & b, int current_height, float alp
 		return alpha;
 	}
 
-float Player::worstBoard(piece_t p, const board & b, int current_height, float alpha, float beta){
+float Player::worstBoard(color_t p, const board & b, int current_height, float alpha, float beta){
 		// I am terminal, so return my value
 		if (terminal(b, current_height)){
-			return FFNN_calculateOutputs(&evaluator, b);
+			return FFNN_calculateOutputs(&evaluator, b, p);
 		}
 		
 		
@@ -212,36 +210,38 @@ bool Player::terminal(const board & b, int current_height){
 // does the actuall searching
 void Player::parallelSearch(int lane_no, const board  & my_root){
 	int current_height = search_start_height-1;
-
+	float tmp_omega;
+	bool obsolete;
+	
 	while(true){
 		
-		cout_lock.lock();
-		node_count++;
-		cout_lock.unlock();
-
-		float tmp_omega;
+//		cout_lock.lock();
+//		node_count++;		//debug
+//		cout_lock.unlock();
+		
 		moveGenerator mg(!my_color, my_root);
-	
 		while (*mg){
 			try {
-				
+				obsolete = false;
 				if(my_color == WHITE){
 					tmp_omega = max(global_alpha, worstBoard(my_color, *mg, current_height-1, global_alpha, global_beta));
+					boost::this_thread::interruption_point();// prevent board change after timeout
 					
 					alpha_lock.lock();
 					if(tmp_omega > global_alpha){
 						global_alpha = tmp_omega; 
 					}
+					obsolete = (global_alpha > global_beta);
+					alpha_lock.unlock();
 					
-					if(global_alpha > global_beta){
-						alpha_lock.unlock();
+					if(obsolete){
 						break;//debug??
 					}
-					alpha_lock.unlock();
 
 
 					board_lock.lock();
 					if(tmp_omega > return_board_val){
+						//cout << "WHITE New board: " << tmp_omega << " vs " << return_board_val << endl; //debug
 						return_board_val = tmp_omega;
 						return_board = my_root;
 					}
@@ -249,36 +249,36 @@ void Player::parallelSearch(int lane_no, const board  & my_root){
 					
 				}else{
 					tmp_omega = min(global_beta, bestBoard(my_color, *mg, current_height-1, global_alpha, global_beta));
+					boost::this_thread::interruption_point();
 					
 					beta_lock.lock();
 					if(tmp_omega < global_beta){
 						global_beta = tmp_omega;
 					}
+					obsolete = (global_alpha > global_beta);
+					beta_lock.unlock();
 					
-					if(global_beta < global_alpha){
-						beta_lock.unlock();
+					if(obsolete){
 						break;//debug??
 					}
-					beta_lock.unlock();
 
 					board_lock.lock();
 					if(tmp_omega < return_board_val){
+						//cout << "BLACK New board: " << tmp_omega << " vs " << return_board_val << endl; //debug
 						return_board_val = tmp_omega;
 						return_board = my_root;
 					}
 					board_lock.unlock();
-
-					
 				}
 			}
 			catch (int e) {
 				if (e == -1){
-/*//debug					cout_lock.lock();
+/*					cout_lock.lock();
 					cerr << "Interupting Thread" << endl; //debug
 					cout_lock.unlock();
 */					boost::this_thread::interruption_point();
 				}else{
-					cerr << "Unknown error: " << e << endl;
+					cerr << lane_no << " Unknown error: " << e << endl;
 					throw e;
 				}
 			}
@@ -286,13 +286,12 @@ void Player::parallelSearch(int lane_no, const board  & my_root){
 			
 			boost::this_thread::interruption_point();
 		}
-/*//debug		
+/*		
 		cout_lock.lock();
-		cout << "(" << lane_no << ") Finished Ply: " << current_height+1 << endl;
+		cout << "(" << lane_no << ") Finished Ply: " << current_height+1 << endl;//debug
 		cout_lock.unlock();
 */
 		current_height++;
-		//break;// debug code
 	}	
 }
 
@@ -307,32 +306,28 @@ void Player::search(){
 	 }else{
 	 // kill thread and start new one
 	 }*/
-	
-	
-	
-	global_alpha = -2.0;
-	global_beta = 2.0;
-
 	bool threaded = true;
 	
 	moveGenerator my_moves(my_color, root);
 	board_lock.lock();
+	global_alpha = -2.0; // before threads
+	global_beta = 2.0;
+	return_board_val = (my_color == WHITE ? -2.0 : 2.0); //each itteration starts with the same values
 	return_board = *my_moves; // assume first move is best until proven otherwise
 	board_lock.unlock();
 	
 	
+
 	int lane_no=-1;
 	while (*my_moves){
 		lane_no++;
 		
 //		cout_lock.lock();
-//debug		cout << "(Master) Creating thread: " << lane_no << endl;
+//		cout << "(Master) Creating thread: " << lane_no << endl;//debug
 //		cout_lock.unlock();
 		
-		//move_lanes[lane_no] = *my_moves;
 		try{
 			branches.create_thread(boost::bind(&Player::parallelSearch, this, lane_no, *my_moves));
-			boost::this_thread::yield();
 		}
 		catch (boost::thread_resource_error tr){
 			cerr << "Caught \'boost::thread_resource_error\'" << endl;
@@ -354,6 +349,10 @@ void Player::search(){
 		my_moves++;
 	}
 	
+	if (lane_no == 0 && threaded){//only one move available
+		goto only_move_cut_foo;
+	}
+	
 	if(!threaded){	// will try serial search
 		cout << "(Master) Going serial" << endl;
 		branches.interrupt_all();
@@ -363,18 +362,20 @@ void Player::search(){
 	
 	cout_lock.lock();
 	cout << "(Master) Branch Factor: " << lane_no+1 << endl;
+	bf.push_back(lane_no+1);
 	cout_lock.unlock();
 
 	while(clock::now() < deadline){
 		// wait
 	}
 	
+only_move_cut_foo:
 	branches.interrupt_all();
 	
-	clock::time_point real_stop = clock::now();
-	boost::chrono::duration<double>	lifespan = (real_stop - real_start);
-//	cout_lock.lock(); //debug	
-//	cout << "(Master) total time for search: " << lifespan  << endl;
+//	clock::time_point real_stop = clock::now();
+//	boost::chrono::duration<double>	lifespan = (real_stop - real_start);
+//	cout_lock.lock(); 	
+//	cout << "(Master) total time for search: " << lifespan  << endl;//debug
 //	cout << "Counted nodes: " << node_count << endl;
 //	cout_lock.unlock();
 }
@@ -398,7 +399,10 @@ std::ostream & operator<<(std::ostream & theStream, const Player & p){
 	return theStream;
 }
 
-
-void Player::toString(){
-	FFNN_printNetwork(&evaluator, root, FFNN_calculateOutputs(&evaluator, root));
+std::string Player::toString(){
+	std::stringstream report(std::stringstream::out);
+	report << "Points earned: " << turny_points << "\n";
+	report << "Games player:  " << games_played << "\n";
+	report << FFNN_toString(evaluator) << endl;
+	return report.str();
 }

@@ -11,7 +11,7 @@
 #define FILE_MOVE_GENERATOR_H_INCLUDED
 
 #include "Board.h"
-#include "Piece.h"
+#include "Color.h"
 
 #include <stdint.h>
 typedef uint32_t	ULONG;
@@ -31,7 +31,7 @@ public:
 	enum Direction {F4, F35, B4, B35, INC};
 	
 private:
-	piece_t player;
+	color_t player;
 	board main_Board;
 	
 	char stack_pos;
@@ -48,7 +48,7 @@ private:
 	ULONG* your_pieces;		 //	if (player == WHITE) points to current_Board.blackpawns
 	
 public:
-	moveGenerator(piece_t, board);
+	moveGenerator(color_t, board);
 	
 	board curBoard();
 	void nextBoard();	
@@ -60,8 +60,8 @@ public:
 	
 private:
 public://debug
-	ULONG sliders(piece_t);
-	ULONG jumpers(piece_t);
+	ULONG sliders(color_t);
+	ULONG jumpers(color_t);
 };
 
 

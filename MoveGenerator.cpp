@@ -11,9 +11,9 @@
 using std::cout; using std::endl;
 
 #include "MoveGenerator.h"
-#include "Piece.h"
+#include "Color.h"
 
-moveGenerator::moveGenerator(piece_t p = WHITE, board newBoard = board()):player(p), main_Board(newBoard), stack_pos(0){
+moveGenerator::moveGenerator(color_t p = WHITE, board newBoard = board()):player(p), main_Board(newBoard), stack_pos(0){
 	current_Piece[0] = 1;
 	current_Board[0] = newBoard;
 	next_Test[0] = F4;
@@ -41,7 +41,7 @@ moveGenerator::moveGenerator(piece_t p = WHITE, board newBoard = board()):player
 }
 
 // rewrite these to take no inputs
-ULONG moveGenerator::sliders(piece_t player){
+ULONG moveGenerator::sliders(color_t player){
 	const ULONG openSquares = ~(main_Board.whitePawns | main_Board.blackPawns); // Not Occupied
  	ULONG One, Two;
  	ULONG movers = 0;
@@ -66,7 +66,7 @@ ULONG moveGenerator::sliders(piece_t player){
 	}
 	return movers;
 }
-ULONG moveGenerator::jumpers(piece_t player){	// true == white to move
+ULONG moveGenerator::jumpers(color_t player){	// true == white to move
 	const ULONG openSquares = ~(main_Board.blackPawns | main_Board.whitePawns);
  	ULONG movers = 0;
  	ULONG tmp = 0;
