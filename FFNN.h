@@ -61,7 +61,7 @@ public:
 
 	void FFNN_setup(FFNN*);	// set up the network
 
-	void FFNN_mutate(FFNN*, FFNN*);						//first becomes a mutant of second	
+	void FFNN_mutate(FFNN &, const FFNN &);				//first becomes a mutant of second	
 	float FFNN_calculateOutputs(FFNN*, float*);			// outputs from the neural network
 	float FFNN_calculateOutputs(FFNN*, const board &, color_t);
 

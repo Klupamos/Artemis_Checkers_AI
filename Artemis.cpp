@@ -7,22 +7,29 @@
  *
  */
 
-#include <iostream>
-#include <fstream>
+
+
+
 #include <iostream>
 using std::cout;
-using std::cin;
+using std::cerr;
 using std::endl;
-
-#include <cstdlib>	// for std::size_t and drand48
+#include <fstream>
+#include <string>
+#include <vector>
+#include <algorithm>
 
 #include <boost/chrono.hpp>
 typedef boost::chrono::steady_clock	steady_clock;
 
-#include "Board.h"
+#include <boost/thread.hpp>
+
 #include "Color.h"
+#include "Board.h"
+#include "MoveGenerator.h"
 #include "Player.h"
-#include "moveGenerator.h"
+#include "GUI.h"
+#include "Training.h"
 
 #if defined(WIN32)
 	#define test_file	"C:\\Users\\Greg\\Dropbox\\School\\Current\\CS_405\\Artemis.nn"
@@ -30,10 +37,21 @@ typedef boost::chrono::steady_clock	steady_clock;
 	#define test_file	"/Users/greg/Dropbox/School/Current/CS_405/Artemis.nn"
 #endif
 
+#define Save_Loc	std::string("/Users/greg/Dropbox/School/Current/CS_405/Artemis/Training_nets/")
 
 int main(int argc, char * const argv[]){
-		
-/*
+	
+	/* // THis is the final run code
+	Training turny;
+	if(!turny.load(Save_Loc)){
+		cerr << "Error loading players!!" << endl;
+		exit(0);
+	}
+	turny.run();
+*/
+	
+/*	
+	Player Artemis(WHITE);
 	std::ofstream ofile(test_file, std::ofstream::binary);
 	ofile << Artemis;
 	if (!ofile.is_open() || !ofile.good()){
@@ -42,26 +60,45 @@ int main(int argc, char * const argv[]){
 	}
 	ofile.close();
 	return 0;
-/**/
-	
-/*	std::ifstream ifile(test_file, std::ifstream::binary);
+
+	Player MrBlack(WHITE);
+	Player MrWhite(BLACK);
+
+	std::ifstream ifile(test_file, std::ifstream::binary);
 	if (!ifile.is_open() || !ifile.good()){
 		cout << "Read Error" << endl;
 		return -1;
 	}
-	ifile >> Artemis;
+	ifile >> MrBlack;
+	ifile.seekg (0, std::ios::beg);
+	ifile >> MrWhite;
 	ifile.close();
-*/
+
+
+	MrBlack.newboard(board(0x00000FFF, 0xFFF00000, 0));
+	MrBlack.search(false);
+	cout << "Parallel" << endl;
+	cout << MrBlack.return_board_val << " / " << MrBlack.node_count << endl;
+	MrBlack.getmove().printBoard();
+
+
+	MrBlack.newboard(board(0x00000FFF, 0xFFF00000, 0));
+	MrBlack.search(true);
+	cout << "Serial" << endl;
+	cout << MrBlack.return_board_val << " / " << MrBlack.node_count << endl;
+	MrBlack.getmove().printBoard();
+
+	exit(0);
+
 
 	board officialBoard(0x00000FFF, 0xFFF00000, 0);
 	officialBoard.printBoard();
 
-	Player MrBlack(WHITE);
-	Player MrWhite(BLACK);
+//	Player MrBlack(WHITE);
+//	Player MrWhite(BLACK);
 	
 	color_t active_player = WHITE;
 	size_t moves=0;
-	
 	
 	steady_clock::time_point game_start = steady_clock::now();
 	do{
@@ -74,6 +111,10 @@ int main(int argc, char * const argv[]){
 				MrBlack.getmove().printBoard();
 				exit(-1);
 			}
+			if(moves != 1){
+				cout << "White thought it was" << endl;
+				MrBlack.getyourmove().printBoard();
+			}
 			MrBlack.search();
 			officialBoard = MrBlack.getmove();
 		}else{
@@ -83,6 +124,8 @@ int main(int argc, char * const argv[]){
 				MrWhite.getmove().printBoard();
 				exit(-1);
 			}
+			cout << "Black thought it was" << endl;
+			MrWhite.getyourmove().printBoard();
 			MrWhite.search();
 			officialBoard = MrWhite.getmove();
 		}
@@ -111,6 +154,14 @@ int main(int argc, char * const argv[]){
 	
 	cout << "Black" << endl;
 	cout << MrWhite.toString() << endl;
+	*/
+	
+	
+	
+	
+	
+	
+	
 	
 }
 

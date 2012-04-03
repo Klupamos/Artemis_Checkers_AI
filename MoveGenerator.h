@@ -16,8 +16,6 @@
 #include <stdint.h>
 typedef uint32_t	ULONG;
 
-
-
 class moveGenerator{
 public:
 	enum {

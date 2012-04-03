@@ -13,7 +13,6 @@ using std::cout;
 using std::endl;
 
 #include <sstream>
-
 #include <string>
 
 
@@ -56,6 +55,13 @@ inline float sigmoid(float x){
 	Post: returns a random number between [-variance, variance] from a normal distribution
  */
 inline float randNorm(double variance){
+
+	// Box Mauller
+	double U1 = FFNN::randGen();
+	double U2 = FFNN::randGen();
+	
+	return sqrt(variance) * sqrt(-2.0 * log(U1)) * cos(2 * 3.141592 * U2);
+/*	// Central Limit
 	double norm = 0.0;
 	norm += random_function + random_function;
 	norm += random_function + random_function;
@@ -65,6 +71,7 @@ inline float randNorm(double variance){
 	norm += random_function + random_function;	// [-12, 12]
 	norm *= variance/12.0;						// [-v, v]
 	return (float)norm;
+ */
 }
 
 /*	Pre: argc > 0 && argv[argc-1] == 1
@@ -81,7 +88,6 @@ inline float randNorm(double variance){
 	}
  */
 void FFNN_setup(FFNN *network){	
-	
 	network->layers_size = def_total_layers;
 	
 	network->king_value = (float)(random_function/2.0 + 1.5);	// [1, 2]
@@ -136,23 +142,23 @@ void FFNN_setup(FFNN *network){
 	Pre: child and parent are both initilized
 	Post: child == a mutant of parent
  */
-void FFNN_mutate(FFNN* child, FFNN* parent){
+void FFNN_mutate(FFNN & child, const FFNN & parent){
 	int weight_index;
 	float tmp;
 	
 	for(int l=0; l<def_total_layers-1; l++){									
 		weight_index = 0;
-		for (int node = 0; node < parent->layers[l+1]; node++) {
-			for (int pre_node = 0; pre_node < parent->layers[l]; pre_node++, weight_index++) {
-				tmp = parent->aligned_weights[l][weight_index] + randNorm(parent->variance);
-				child->aligned_weights[l][weight_index] = tmp;
+		for (int node = 0; node < parent.layers[l+1]; node++) {
+			for (int pre_node = 0; pre_node < parent.layers[l]; pre_node++, weight_index++) {
+				tmp = parent.aligned_weights[l][weight_index] + randNorm(parent.variance);
+				child.aligned_weights[l][weight_index] = tmp;
 			}
 			weight_index += (3&(4-weight_index));
 		}
 	}
 	
-	child->king_value = parent->king_value + randNorm(parent->variance);
-	child->variance = parent->variance + randNorm(0.05);
+	child.king_value = parent.king_value + randNorm(parent.variance);
+	child.variance = parent.variance + randNorm(0.05);
 }
 
 /*	calculateOutputs()
@@ -471,6 +477,7 @@ std::istream & operator>>(std::istream & theStream, FFNN & network){
 	
 	theStream.read((char*)&(network.layers_size), sizeof(int));
 	if(network.layers_size != def_total_layers){
+		std::cerr << "Error: Read file has wrong network size." << endl;
 		std::exception e;
 		throw(e);
 	}
@@ -530,9 +537,8 @@ std::ostream & operator<<(std::ostream & theStream, const FFNN & network){
 
 
 std::string FFNN_toString(const FFNN & network){
-	std::stringstream report(std::stringstream::out);
-	report << "King value: " << network.king_value << endl;
-	report << "Variance:   " << network.variance << endl;
-	return report.str();
+	std::stringstream ss;
+	ss << network.king_value << ", " << network.variance << "\n";
+	return ss.str();
 }
 
