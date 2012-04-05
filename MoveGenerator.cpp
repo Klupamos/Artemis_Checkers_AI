@@ -336,6 +336,9 @@ void moveGenerator::nextBoard(){
 			if (end_of_chain[stack_pos]){
 //				cout << "End of Chain" << endl;
 				current_Board[0] = current_Board[stack_pos];
+				
+				current_Board[0].kings |= (current_Board[0].whitePawns & 0xF0000000);
+				current_Board[0].kings |= (current_Board[0].blackPawns & 0x0000000F);
 				return;
 			}
 			
@@ -441,7 +444,7 @@ void moveGenerator::nextBoard(){
 				
 				
 			default:
-//				cout << "Error: piece (" << current_Piece[0] << ") with no move" << endl;
+				cout << "Error: piece (" << current_Piece[0] << ") with no move" << endl;
 				current_Board[0] = board();
 				return;
 		}

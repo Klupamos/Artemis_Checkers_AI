@@ -60,7 +60,7 @@ inline float randNorm(double variance){
 	double U1 = FFNN::randGen();
 	double U2 = FFNN::randGen();
 	
-	return sqrt(variance) * sqrt(-2.0 * log(U1)) * cos(2 * 3.141592 * U2);
+	return (float)(sqrt(variance) * sqrt(-2.0 * log(U1)) * cos(2 * 3.141592 * U2));
 /*	// Central Limit
 	double norm = 0.0;
 	norm += random_function + random_function;
@@ -273,7 +273,7 @@ float FFNN_calculateOutputs(FFNN* network, const board & bitboard, color_t c){
 	}
 	inputs[0] = white;
 	inputs[1] = black;
-	inputs[2] = c;
+	inputs[2] = (float)c;
 	inputs[3] = 1.0;
 	
 	

@@ -23,15 +23,17 @@
 #include "Color.h"
 
 // largest seen in testing was 11
-#define MAX_BF	50
+#define MAX_BF	30
 
 class Player { // can also be thought of as the player
 public:
 	typedef boost::chrono::steady_clock	clock;
-	typedef boost::chrono::seconds seconds;
+	typedef boost::chrono::milliseconds milliseconds;
 	
-	enum {WIN = 1, DRAW = 0, LOSS = -2};
+	enum point_t {WIN = 1, DRAW = 0, LOSS = -2};
+	enum state_t {DOING, THINKING};
 private:
+	std::string uid;
 	int turny_points;
 	int age;
 	
@@ -39,8 +41,8 @@ private:
 	FFNN evaluator;
 	board root;
 	
+	milliseconds move_time_limit;
 	clock::time_point move_deadline;
-	clock::time_point think_deadline;
 	boost::thread_group branches;
 	board yourmoves[MAX_BF];
 	boost::mutex cout_lock;// look at upgrade_locks and shared_locks	
@@ -58,21 +60,26 @@ private:
 	float global_beta;
 
 	boost::mutex board_lock;
-	float return_board_val;
+	float buffer_board_val;
+	board buffer_board;
+	
 	board return_board;
 	
 	
 public:
 	Player();
+	~Player(){branches.join_all();}
+	void setTimeLimit(boost::chrono::milliseconds);
 	void setColor(color_t);
 	void mutate(Player &);
 	
 	bool newboard(const board &);
-	void search(bool force_serial = false); // does searching for my move
-	void thinkAhead();	
+	void search(); // does searching for my move
+	void thinkAhead();	// will uses opponents time to search for my next move
 	board getmove();
 	board getyourmove(){return yourBest;};//debug
 	
+	const std::string & getUID()const{return uid;}
 	void victory(){turny_points+=WIN;}
 	void defeat(){turny_points+=LOSS;}
 	void draw(){turny_points+=DRAW;}

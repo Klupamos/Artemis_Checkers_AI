@@ -12,6 +12,8 @@
 
 #include <string>
 
+#include <omp.h>
+
 #include "Player.h"
 
 #define POPULATION	50
@@ -23,6 +25,13 @@ private:
 	int generation;
 	std::vector<Player*> competitors;
 	
+	omp_lock_t locks;
+	omp_lock_t* plocks; // locks for each player	
+	
+	double Average_expected_board;
+	double Average_branching_factor;
+	double Average_moves_per_game;
+	
 public:
 	Training();
 	~Training();
@@ -32,9 +41,13 @@ public:
 	bool load(std::string);
 	
 private:
-	void orginization();
-	void gameplay(Player &, Player &); // play a game between two player pointers
+
+	void tournament();
+	void organization();
+	void gameplay(Player &, Player &);
 	void reproduction();
 };
+
+
 
 #endif // FILE_TRAINING_H_INCLUDED
