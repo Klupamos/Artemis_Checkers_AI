@@ -35,10 +35,10 @@ using boost::filesystem::exists;
 #include "Player.h"
 #include "Training.h"
 
-#define Save_Loc	string("/Users/greg/Dropbox/School/Current/CS_405/Artemis/Training_nets/")
+#define Save_Loc	std::string("/Users/greg/Dropbox/School/Current/CS_405/Artemis/Training_nets/")
 #define	MOVETIME_EQUATION	(std::min(59.5,(1.5+generation))*1000.0)
 
-Training::Training() {
+Training::Training():Avg_branching_factor_num(0) {
 	generation = 0;
 
 	competitors.resize(POPULATION);
@@ -48,9 +48,8 @@ Training::Training() {
 	
 	omp_init_lock(&locks);
 
-	plocks = new omp_lock_t[POPULATION];
 	for(int i=0; i<POPULATION; ++i){
-		omp_init_lock( &(plocks[i]) );
+		omp_init_lock( plocks+i );
 	}
 	
 };
@@ -60,20 +59,17 @@ Training::~Training(){
 	std::remove_if(competitors.begin(), competitors.end(), deleteAll);
 	omp_destroy_lock(&locks);
 	for(int i=0; i<POPULATION; ++i){
-		omp_destroy_lock( &(plocks[i]) );
+		omp_destroy_lock( plocks+i );
 	}
-	delete[] plocks;
 }
 
 void Training::save(string SaveLocation){
 	// try to create Genreation Folder
 	path genFolder(SaveLocation);
 	stringstream ss;
-	ss.clear();
 	ss << generation;
 	
 	genFolder /= ss.str();
-	cout << genFolder << endl;
 	
 	//try to create SaveLoaction
 	if (!is_directory(genFolder)){
@@ -95,12 +91,39 @@ void Training::save(string SaveLocation){
 		}
 	}
 
-	genFolder /= "meta.txt";
-	boost::filesystem::ofstream file(genFolder);
+};
+void Training::save_meta(string SaveLocation){
+
+	path meta_loc(SaveLocation);
+	stringstream ss;
+	ss << generation;
+	meta_loc /= ss.str();
+	meta_loc /= "meta.txt";
+	boost::filesystem::ofstream file(meta_loc);
+	
+	file << "Generation " << generation << endl;
+	file << "Avg mpg: " << Avg_moves_per_game_num / (2.0 * POPULATION) << endl;
+	//	file << "Runtime: " << boost::chrono::duration<double, boost::chrono::minutes>(turny_end - turny_start) << endl;
+	typedef boost::chrono::duration<double, boost::ratio<3600> > hours;
+	hours mins(turny_end - turny_start);
+	file << "Runtime: " << mins << endl;
+	file << "Avg bf:  " << (double)Avg_branching_factor_num / Avg_moves_per_game_num << endl;
+	
+	file << "-------------------" << endl << endl;
+	
+	int cutoff = (int)(SURV_THRESHOLD / 100.0 * POPULATION);
 	for (int net_number = 0; net_number < POPULATION; net_number++ ){
+		
+		if (net_number == cutoff){
+			file << "-------------------" << endl << endl;
+		}
+		
 		file << *(competitors[net_number]) << endl;
 	}
-
+	
+	file.close();
+	
+	
 };
 
 bool Training::load(string SaveLocation){
@@ -111,12 +134,15 @@ bool Training::load(string SaveLocation){
 	do{
 		genFolder = path(SaveLocation);
 		
-		cout << "Enter the generation to load: ";
+		cout << "Enter the generation to load:   (0 to not load any players)" << endl;
 		std::cin >> generation;
-		
+
+		if(generation == 0){
+			return true;
+		}
+
 		// try to create Genreation Folder
 		stringstream ss;
-		ss.clear();
 		ss << generation;
 		genFolder /= ss.str();
 
@@ -146,64 +172,95 @@ bool Training::load(string SaveLocation){
 
 void Training::run(){
 	do{
-		tournament();	// game play happens here
-		organization(); // Best first sort
-
-		//if(generation % 5 == 0){
-			save(Save_Loc);
-		//}
+		Avg_branching_factor_num = 0;
+		Avg_moves_per_game_num = 0;
 		
-		reproduction();	// mutate below cutoff / birthday above
+		cout << "Starting generation " << ++generation << endl;
+		cout << "\t" << MOVETIME_EQUATION/(1000.0) << " seconds per move" << endl;
 
+		save(Save_Loc);
+
+		turny_start = boost::chrono::steady_clock::now();
+		tournament();	// game play happens here
+		turny_end = boost::chrono::steady_clock::now();
+		
+		organization(); // Best first sort
+		
+		save_meta(Save_Loc);
+
+		reproduction();	// mutate below cutoff / birthday above
 	}while (true);
 }
 
 void Training::tournament(){
-	++generation;
 
 	#pragma omp parallel for
 	for(int index=0; index<POPULATION; ++index){
 		
-		
-		
-		int opp1 = (int)((POPULATION-1) * FFNN::randGen());
-		int opp2 = (int)((POPULATION-1) * FFNN::randGen());
-		
-		if (opp1 == index){++opp1;} // playing self wont work
-		if (opp2 == index){++opp2;} // 
+		int opp1;
+		int opp2;
+		 
+		boost::chrono::steady_clock::time_point start;
+		boost::chrono::steady_clock::time_point end;
 		
 		// game 1
 		omp_set_lock(&locks);
 		omp_set_lock(&(plocks[index]));
-		omp_set_lock(&(plocks[opp1]));
+		while (true){
+			opp1 = (int)((POPULATION-1) * FFNN::randGen());
+			
+			if(index == opp1){
+				continue;
+			}
+			if(!omp_test_lock(plocks + opp1)){
+				continue;
+			}
+			
+			break;
+		}
 		omp_unset_lock(&locks);
 		
-		cout << "(" << omp_get_thread_num() << ") Gen: " << generation << "\t| " <<  index << " playing " << opp1 << endl;
+		start = boost::chrono::steady_clock::now();
 		gameplay(*(competitors[index]), *(competitors[opp1]));
-
-
-		omp_unset_lock(&(plocks[index]));
+		end = boost::chrono::steady_clock::now();
+		
 		omp_unset_lock(&(plocks[opp1]));
+		
+		cout << "(" << omp_get_thread_num() << ") player: " << index << "\tTime: " << boost::chrono::duration<double>(end - start) << endl;
+		
 		
 		
 		// game 2
 		omp_set_lock(&locks);
-		omp_set_lock(&(plocks[index]));
-		omp_set_lock(&(plocks[opp2]));
-		cout << "(" << omp_get_thread_num() << ") Gen: " << generation << "\t| " <<  index << " playing " << opp2 << endl;
+		while (true){	
+			opp2 = (int)((POPULATION-1) * FFNN::randGen());
+			
+			if(index == opp2){
+				opp2 = (int)((POPULATION-1) * FFNN::randGen());
+				continue;
+			}
+			if(!omp_test_lock(plocks + opp2)){
+				continue;
+			}
+			
+			break;
+		}
 		omp_unset_lock(&locks);
 
+		start = boost::chrono::steady_clock::now();
 		gameplay(*(competitors[index]), *(competitors[opp2]));
+		end = boost::chrono::steady_clock::now();
+		
 		omp_unset_lock(&(plocks[index]));
 		omp_unset_lock(&(plocks[opp2]));
 		
+		cout << "(" << omp_get_thread_num() << ") player: " << index << "\tTime: " << boost::chrono::duration<double>(end - start) << endl;
 	}
-	
 }
 
 void Training::gameplay(Player & White, Player & Black){
-	size_t moves=0;	
-	
+	int moves=0;	
+	bool cheated = false;
 	milliseconds turn_time_limit((long long)MOVETIME_EQUATION);
 	White.setColor(WHITE);
 	White.setTimeLimit(turn_time_limit);
@@ -211,8 +268,13 @@ void Training::gameplay(Player & White, Player & Black){
 	Black.setTimeLimit(turn_time_limit);
 	
 	board officialBoard(0x00000FFF, 0xFFF00000, 0);
-	color_t active_player = WHITE;
+	color_t active_player = BLACK;
 	
+	stringstream game_log;
+	
+	game_log << officialBoard;
+	
+	int bf;
 	do{
 		++moves;
 		if(moves >= 80){
@@ -220,24 +282,40 @@ void Training::gameplay(Player & White, Player & Black){
 		}
 		
 		if(active_player == WHITE){
-			if(!White.newboard(officialBoard)){
+			game_log << "White's move"<<endl;
+			bf = White.newboard(officialBoard);
+			if(!bf){
+				game_log << "White calls cheater"<<endl;
+				cout << "White calls cheater"<<endl;
+				cheated = true;
+				game_log << Black.splat();
 				White.victory();
 				Black.defeat();
-				return;
+				goto save_game_log;
 			}
-			White.search();// do serial search (I dont trust alpha-beta)
+			White.search();
 			officialBoard = White.getmove();
 			White.thinkAhead();
 		}else{
-			if(!Black.newboard(officialBoard)){
+			game_log << "Black's move"<<endl;
+			bf = Black.newboard(officialBoard);
+			if(!bf){
+				game_log << "Black calls cheater"<<endl;
+				cout << "Black calls cheater"<<endl;
+				cheated = true;
+				game_log << White.splat();
 				Black.victory();
 				White.defeat();
-				return;
+				goto save_game_log;
 			}
 			Black.search();
 			officialBoard = Black.getmove();
 			Black.thinkAhead();
 		}
+		
+		game_log << officialBoard;
+		
+		Avg_branching_factor_num += bf;
 		
 		if(officialBoard == board()){	//active Player could not make a move
 			if(active_player == WHITE){
@@ -247,7 +325,7 @@ void Training::gameplay(Player & White, Player & Black){
 				Black.defeat();
 				White.victory();
 			}
-			return;
+			goto save_game_log;
 		}
 		
 		active_player = !active_player;
@@ -264,6 +342,21 @@ void Training::gameplay(Player & White, Player & Black){
 		Black.draw();
 	}
 	
+save_game_log:
+	Avg_moves_per_game_num += moves;
+	
+	path genFolder(Save_Loc);
+	stringstream ss;
+	ss << generation;
+	genFolder /= ss.str();
+	
+	ss.str(std::string());
+	ss << (cheated == true? "Review_": "") << "Game_" << White.getUID() << "_vs_" << Black.getUID() << ".log";
+	genFolder /= ss.str();
+	
+	boost::filesystem::ofstream file(genFolder);
+	file << game_log.str() << endl;
+	file.close();
 }
 
 bool lessThan(Player* i,Player* j) { return (i->getScore() > j->getScore()); }

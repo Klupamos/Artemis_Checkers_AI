@@ -25,7 +25,6 @@ interface::interface(){
 }
 
 
-
 void GUI_init(int argc, char ** argv){
 	//global
 	GUI.menu_displayed = true;

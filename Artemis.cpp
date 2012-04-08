@@ -28,8 +28,8 @@ typedef boost::chrono::steady_clock	steady_clock;
 #include "Board.h"
 #include "MoveGenerator.h"
 #include "Player.h"
-#include "GUI.h"
 #include "Training.h"
+#include "Client.h"
 
 #if defined(WIN32)
 	#define test_file	"C:\\Users\\Greg\\Dropbox\\School\\Current\\CS_405\\Artemis\\Training_nets\\0\\0"
@@ -40,9 +40,102 @@ typedef boost::chrono::steady_clock	steady_clock;
 #define Save_Loc	std::string("/Users/greg/Dropbox/School/Current/CS_405/Artemis/Training_nets/")
 
 int main(int argc, char * const argv[]){
+
 	
+	// This is the client software to play in the class tournamnet
+	board officialBoard(0x00000FFF, 0xFFF00000, 0);
+	
+	
+	Client user_client;
+	
+	if (!user_client.connect(argv[1], argv[2])){
+		cout << "Could not conect to " << argv[1] << ":" << argv[2] << endl;
+		return 0;
+	}
+	// enter GUI mode
+	if(user_client.color() == SPEC){
+		while (true) {
+			user_client.recv(officialBoard);
+			officialBoard.printBoard();
+		}
+	}
+	
+	
+	Player user_Player;
+	user_Player.setColor(user_client.color());
+	user_Player.setTimeLimit(boost::chrono::milliseconds(500));
+	
+	bool first_move = false;
+	bool ignore_next = false;
+	moveGenerator mg(BLACK, officialBoard);
+	
+	
+	if (user_client.color() == WHITE){		// server code says black goes first
+		ignore_next = true;					// so ignore the servers first broadcast
+		first_move = true;
+	}
+/********************/	
+// Send move before game has started, overwriting the startgame the broadcast 
+// Causes the server to stop listening to opponent
+/********************/
+/*
+	if (user_client.color() == BLACK){
+		ignore_next = true;
+		first_move = false;
+		goto jmp_start;
+	}
+/**/	
+	while (true) {
+		if(ignore_next){
+			ignore_next = false;
+			user_client.recv(officialBoard);
+			std::cout << "Ignored" << std::endl;			
+			
+			if(officialBoard != board(0x00000FFF, 0xFFF00000, 0)){ // I ignored the wrong one
+				goto jmp_start;
+			}
+		}
+		
+		user_client.recv(officialBoard);
+		officialBoard.printBoard();
+
+		jmp_start:
+		if(first_move){
+			first_move = false;
+			while(*mg){
+				if (*mg == officialBoard){goto jmp_start;}
+				mg++;
+			}
+			user_client.send("invalid");
+			exit(0);
+		}
+		
+		if(!user_Player.newboard(officialBoard)){
+			user_client.send("invalid");
+			break;
+		}
+		user_Player.search();
+		officialBoard = user_Player.getmove();
+		user_Player.thinkAhead();
+	
+		
+		user_client.send(officialBoard);
  
-	// This is the final run code
+		officialBoard.printBoard();
+		
+		
+		//if you hav no moves then I win
+/*		moveGenerator mg(!user_client.color(), officialBoard);
+		if (!*mg){
+			user_client.send((user_client.color() == WHITE ? "white wins" : "black wins"));
+			break;
+		}
+*/
+	}
+	
+/**/
+/*
+	// This is the training run code
 	Training turny;
 	if(!turny.load(Save_Loc)){
 		cerr << "Error loading players!!" << endl;
@@ -50,43 +143,26 @@ int main(int argc, char * const argv[]){
 	}
 	turny.run();
 	exit(0);
-/**/ 
-	
-	boost::chrono::milliseconds turn_time_limit(500);
-	
-	Player MrBlack;
-	MrBlack.load(test_file);
-	MrBlack.setColor(WHITE);
-	MrBlack.setTimeLimit(turn_time_limit);
-	
-	Player MrWhite;
-	MrWhite.load(test_file);
-	MrWhite.setColor(BLACK);
-	MrWhite.setTimeLimit(turn_time_limit);
-	
-
-/*  AB validation
-	MrBlack.newboard(board(0x00000FFF, 0xFFF00000, 0));
-	MrBlack.search(false);
-	cout << "Parallel" << endl;
-	cout << MrBlack.return_board_val << " / " << MrBlack.node_count << endl;
-	MrBlack.getmove().printBoard();
-
-
-	MrBlack.newboard(board(0x00000FFF, 0xFFF00000, 0));
-	MrBlack.search(true);
-	cout << "Serial" << endl;
-	cout << MrBlack.return_board_val << " / " << MrBlack.node_count << endl;
-	MrBlack.getmove().printBoard();
-
-	exit(0);
 /**/
+	
+/*	
+	boost::chrono::milliseconds turn_time_limit(2500);
+	
+	Player whiteplayer;
+	whiteplayer.setColor(WHITE);
+	whiteplayer.setTimeLimit(turn_time_limit);
+	
+	Player blackplayer;
+	blackplayer.setColor(BLACK);
+	blackplayer.setTimeLimit(turn_time_limit);
+	
 
 	board officialBoard(0x00000FFF, 0xFFF00000, 0);
 	officialBoard.printBoard();
 	
-	color_t active_player = WHITE;
+	color_t active_player = BLACK;
 	size_t moves=0;
+	int bf;
 	
 	steady_clock::time_point game_start = steady_clock::now();
 	do{
@@ -95,34 +171,27 @@ int main(int argc, char * const argv[]){
 		if(moves >= 80){break;}
 		
 		if(active_player == WHITE){
-			if(!MrBlack.newboard(officialBoard)){
-				std::cerr << "Whites calls cheater" << endl;
-//				cout << "No connection from" << endl;
-//				MrBlack.getmove().printBoard();
-				exit(-1);
-			}
-//			if(moves != 1){
-//				cout << "White thought it was" << endl;
-//				MrBlack.getyourmove().printBoard();
-//			}
 			cout << "Whites move" << endl;
-			MrBlack.search();
-			officialBoard = MrBlack.getmove();
-			MrBlack.thinkAhead();
-			
-		}else{
-			if(!MrWhite.newboard(officialBoard)){
-				std::cerr << "Blacks calls cheater" << endl;
-//				cout << "No connection from" << endl;
-//				MrWhite.getmove().printBoard();
+			bf = whiteplayer.newboard(officialBoard);
+			if(!bf){
+				std::cerr << "Whites calls cheater" << endl;
+				cout << blackplayer.splat();
 				exit(-1);
 			}
-//			cout << "Black thought it was" << endl;
-//			MrWhite.getyourmove().printBoard();
+			whiteplayer.search();
+			officialBoard = whiteplayer.getmove();
+			whiteplayer.thinkAhead();
+		}else{
 			cout << "Blacks move" << endl;
-			MrWhite.search();
-			officialBoard = MrWhite.getmove();
-			MrWhite.thinkAhead();
+			bf = blackplayer.newboard(officialBoard);
+			if(!bf){
+				std::cerr << "Blacks calls cheater" << endl;
+				cout << whiteplayer.splat();
+				exit(-1);
+			}			
+			blackplayer.search();
+			officialBoard = blackplayer.getmove();
+			blackplayer.thinkAhead();
 		}
 		
 		officialBoard.printBoard();
@@ -130,13 +199,13 @@ int main(int argc, char * const argv[]){
 		
 		if(officialBoard == board()){	//active Player could not make a move
 			if(active_player == WHITE){
-				MrWhite.victory();
-				MrBlack.defeat();
+				blackplayer.victory();
+				whiteplayer.defeat();
 			}else{
-				MrWhite.defeat();
-				MrBlack.victory();
+				blackplayer.defeat();
+				whiteplayer.victory();
 			}
-			return 0;
+			break;
 		}
 		
 		
@@ -147,25 +216,25 @@ int main(int argc, char * const argv[]){
 	steady_clock::time_point game_end = steady_clock::now();
 	boost::chrono::duration<double> d = game_end - game_start;
 	
-	cout << d << "/" << moves << " = " << (d)/moves << " per move" << endl;
+	cout << d << "/" << moves << " moves = " << (d)/moves << " per move" << endl;
 	
 	if(officialBoard.whitePawns && !officialBoard.blackPawns){
-		MrBlack.victory();
-		MrWhite.defeat();
+		whiteplayer.victory();
+		blackplayer.defeat();
 	}else if (officialBoard.blackPawns && !officialBoard.whitePawns){
-		MrWhite.victory();
-		MrBlack.defeat();
+		blackplayer.victory();
+		whiteplayer.defeat();
 	}else{
-		MrBlack.draw();
-		MrWhite.draw();
+		whiteplayer.draw();
+		blackplayer.draw();
 	}
 
 	
 	cout << "White" << endl;
-	cout << MrBlack << endl;
+	cout << whiteplayer << endl;
 	
 	cout << "Black" << endl;
-	cout << MrWhite << endl;
+	cout << blackplayer << endl;
 /*	*/
 	
 	

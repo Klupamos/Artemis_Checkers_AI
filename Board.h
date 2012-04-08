@@ -13,6 +13,7 @@
 #include <stdint.h>
 typedef uint32_t	ULONG;
 
+#include <string>
 
 class board{
 public:
@@ -36,9 +37,14 @@ public:
 	board():whitePawns(0), blackPawns(0), kings(0){};
 	board(ULONG w, ULONG b, ULONG k):whitePawns(w), blackPawns(b), kings(k){};
 	
+	std::string toSeq() const;
+	void fromSeq(const std::string &);
+						
 	void printBoard() const;
 	bool winner() const;
 
+	friend std::ostream & operator<<(std::ostream &, const board &);
+	
 	inline	operator bool() const{
 		return (whitePawns | blackPawns) > 0;
 	};

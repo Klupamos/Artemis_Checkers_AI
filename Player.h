@@ -24,9 +24,11 @@
 
 // largest seen in testing was 11
 #define MAX_BF	30
+#define MODAL_SIZE	15
 
 class Player { // can also be thought of as the player
 public:
+	
 	typedef boost::chrono::steady_clock	clock;
 	typedef boost::chrono::milliseconds milliseconds;
 	
@@ -42,14 +44,12 @@ private:
 	board root;
 	
 	milliseconds move_time_limit;
+	boost::thread_specific_ptr<clock::time_point> tptr;
 	clock::time_point move_deadline;
 	boost::thread_group branches;
 	board yourmoves[MAX_BF];
-	boost::mutex cout_lock;// look at upgrade_locks and shared_locks	
-	
-	int node_count;
-	std::vector<int> bf;
-	
+	boost::mutex stats_lock;// look at upgrade_locks and shared_locks	
+		
 	boost::mutex your_lock;
 	board yourBest;
 	
@@ -65,6 +65,12 @@ private:
 	
 	board return_board;
 	
+	// stats member variables
+	int modal_bucket[MODAL_SIZE]; //(6, 21)
+	
+	int Avg_eb_hit_num;
+	int Avg_eb_hit_den;
+	
 	
 public:
 	Player();
@@ -73,7 +79,7 @@ public:
 	void setColor(color_t);
 	void mutate(Player &);
 	
-	bool newboard(const board &);
+	int newboard(const board &);
 	void search(); // does searching for my move
 	void thinkAhead();	// will uses opponents time to search for my next move
 	board getmove();
@@ -84,12 +90,17 @@ public:
 	void defeat(){turny_points+=LOSS;}
 	void draw(){turny_points+=DRAW;}
 	int getScore()const{return turny_points;}
-	void resetScore(){turny_points = 0;}
+	void resetScore(){turny_points = 0;
+		for(int i=0;i<MODAL_SIZE; ++i){
+			modal_bucket[i] = 0;
+		}
+		Avg_eb_hit_num = 0;Avg_eb_hit_den = 0;
+	}
 	int getAge()const{return age;}
 	void resetAge(){age = 0;}
 	void birthday(){++age;}
-	
 	void save(boost::filesystem::path);
+	std::string splat();
 	bool load(boost::filesystem::path);
 	
 	bool operator<(const Player &);

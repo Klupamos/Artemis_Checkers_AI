@@ -12,6 +12,8 @@
 
 #include <string>
 
+#include <boost/rational.hpp>
+
 #include <omp.h>
 
 #include "Player.h"
@@ -26,11 +28,12 @@ private:
 	std::vector<Player*> competitors;
 	
 	omp_lock_t locks;
-	omp_lock_t* plocks; // locks for each player	
-	
-	double Average_expected_board;
-	double Average_branching_factor;
-	double Average_moves_per_game;
+	omp_lock_t plocks[POPULATION]; // locks for each player	
+
+	int Avg_branching_factor_num;
+	int Avg_moves_per_game_num;
+	boost::chrono::steady_clock::time_point turny_start;
+	boost::chrono::steady_clock::time_point turny_end;
 	
 public:
 	Training();
@@ -38,6 +41,7 @@ public:
 	void run();
 
 	void save(std::string);
+	void save_meta(std::string);
 	bool load(std::string);
 	
 private:
