@@ -37,6 +37,7 @@ using boost::filesystem::exists;
 
 #define Save_Loc	std::string("/Users/greg/Dropbox/School/Current/CS_405/Artemis/Training_nets/")
 #define	MOVETIME_EQUATION	(std::min(59.5,(1.5+generation))*1000.0)
+#define CBUFFER	20
 
 Training::Training():Avg_branching_factor_num(0) {
 	generation = 0;
@@ -87,7 +88,6 @@ void Training::save(string SaveLocation){
 		//try to create network file
 		if(!boost::filesystem::is_regular(netPath)){
 			competitors[net_number]->save(netPath);
-			
 		}
 	}
 
@@ -102,15 +102,17 @@ void Training::save_meta(string SaveLocation){
 	boost::filesystem::ofstream file(meta_loc);
 	
 	file << "Generation " << generation << endl;
-	file << "Avg mpg: " << Avg_moves_per_game_num / (2.0 * POPULATION) << endl;
+	file << "Avg mpg:       " << Avg_moves_per_game_num / (2.0 * POPULATION) << endl;
 	//	file << "Runtime: " << boost::chrono::duration<double, boost::chrono::minutes>(turny_end - turny_start) << endl;
 	typedef boost::chrono::duration<double, boost::ratio<3600> > hours;
-	hours mins(turny_end - turny_start);
-	file << "Runtime: " << mins << endl;
-	file << "Avg bf:  " << (double)Avg_branching_factor_num / Avg_moves_per_game_num << endl;
+	hours hrs(turny_end - turny_start);
+	file << "Runtime:       " << hrs << endl;
+	file << "Avg game time: " << hrs / (POPULATION*2.0) << endl;
+	file << "Avg bf:        " << (double)Avg_branching_factor_num / Avg_moves_per_game_num << endl;
 	
 	file << "-------------------" << endl << endl;
 	
+	int orig = 0;
 	int cutoff = (int)(SURV_THRESHOLD / 100.0 * POPULATION);
 	for (int net_number = 0; net_number < POPULATION; net_number++ ){
 		
@@ -119,11 +121,14 @@ void Training::save_meta(string SaveLocation){
 		}
 		
 		file << *(competitors[net_number]) << endl;
+		if(competitors[net_number]->getUID().find("g") != std::string::npos){
+			++orig;
+		}
+		
 	}
-	
+	file << "-------------------" << endl;
+	file << "Percent remaining from first gen: " << (double)orig/POPULATION*100.0 << "%" << endl;
 	file.close();
-	
-	
 };
 
 bool Training::load(string SaveLocation){
@@ -134,7 +139,7 @@ bool Training::load(string SaveLocation){
 	do{
 		genFolder = path(SaveLocation);
 		
-		cout << "Enter the generation to load:   (0 to not load any players)" << endl;
+		std::cout << "Enter the generation to load:   (0 to not load any players)" << std::endl;
 		std::cin >> generation;
 
 		if(generation == 0){
@@ -163,10 +168,7 @@ bool Training::load(string SaveLocation){
 		if(!boost::filesystem::exists(netPath) || !competitors[net_number]->load(netPath)){
 			return false;
 		}
-
-		
 	}
-	
 	return true;
 };
 
@@ -267,6 +269,7 @@ void Training::gameplay(Player & White, Player & Black){
 	Black.setColor(BLACK);
 	Black.setTimeLimit(turn_time_limit);
 	
+	board cycle_buffer[CBUFFER];
 	board officialBoard(0x00000FFF, 0xFFF00000, 0);
 	color_t active_player = BLACK;
 	
@@ -277,8 +280,12 @@ void Training::gameplay(Player & White, Player & Black){
 	int bf;
 	do{
 		++moves;
-		if(moves >= 80){
-			break;
+		for(int l=0; l<CBUFFER; ++l){
+			for(int r=l+1; r<CBUFFER; ++r){
+				if (cycle_buffer[l] == cycle_buffer[r]){
+					break;//two equal boards found in the buffer
+				}
+			}
 		}
 		
 		if(active_player == WHITE){
@@ -295,7 +302,7 @@ void Training::gameplay(Player & White, Player & Black){
 			}
 			White.search();
 			officialBoard = White.getmove();
-			White.thinkAhead();
+//			White.thinkAhead();
 		}else{
 			game_log << "Black's move"<<endl;
 			bf = Black.newboard(officialBoard);
@@ -310,7 +317,7 @@ void Training::gameplay(Player & White, Player & Black){
 			}
 			Black.search();
 			officialBoard = Black.getmove();
-			Black.thinkAhead();
+//			Black.thinkAhead();
 		}
 		
 		game_log << officialBoard;

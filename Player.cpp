@@ -360,7 +360,7 @@ void Player::search(){
 	int lane_no=-1;
 	moveGenerator my_moves(my_color, root);
 
-	//needs to be commented if not calling thinkahead()
+/*	//needs to be commented if not calling thinkahead()
 	if(yourBest == root){// let thread continue
 //		cout << "Expected board returned. Continuing search." << endl;	//debug	
 		Avg_eb_hit_num++;
@@ -510,8 +510,7 @@ std::ostream & operator<<(std::ostream & theStream, const Player & p){
 		}
 
 	theStream << "Avg depth: " << mode + search_start_height << endl;
-	theStream << "Avg eb hit:" << (double)p.Avg_eb_hit_num / p.Avg_eb_hit_den << endl;
-	
+//	theStream << "Avg eb hit:" << (double)p.Avg_eb_hit_num / p.Avg_eb_hit_den << endl;	
 	return theStream;
 }
 

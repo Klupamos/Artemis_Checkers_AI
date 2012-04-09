@@ -67,7 +67,7 @@ void Client::recv(board & b){
 		
 		if(message.find("invalid") != std::string::npos){
 			// my opponent thinks I cheated
-			cout << "You think I cheated!!" << endl;
+			cout << "Humman inspection requested" << endl;
 			exit(0);
 		}
 		
@@ -89,7 +89,11 @@ void Client::recv(board & b){
 		}
 		
 		if(message.find(" wins") != std::string::npos){
-			
+			if(b.winner()){
+				cout << "Congradulations" << endl;
+			}else{
+				cout << "Mabey..?" << endl;
+			}
 			exit(0);
 		}
 		
